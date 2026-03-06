@@ -1,0 +1,1989 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Property Search — ARES Automotive Real Estate Solutions</title>
+  <meta name="description" content="Search automotive-zoned properties across Western Washington. EPA contamination data, grandfathered site tracking, fleet facility search, and title restriction flags — all in one tool." />
+  <meta name="keywords" content="automotive property search WA, EPA contamination check, grandfathered zoning, fleet facility, commercial vehicle property, ARES" />
+  <link rel="canonical" href="https://www.aresautomotivere.com/property-search.html" />
+
+  <!-- Leaflet Map (free, no API key) -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+  <!-- ARES shared styles -->
+  <link rel="stylesheet" href="assets/style.css" />
+
+  <style>
+    /* ============================================================
+       PROPERTY SEARCH — Page-Specific Styles
+       Built to layer on top of ARES brand system (assets/style.css)
+       ============================================================ */
+
+    /* ── APP LAYOUT ── */
+    .ps-app {
+      position: relative;
+      z-index: 1;
+      margin-top: 88px; /* nav height */
+      display: flex;
+      flex-direction: column;
+      height: calc(100vh - 72px);
+      overflow: hidden;
+    }
+
+    /* ── SEARCH TOOLBAR ── */
+    .ps-toolbar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 20px;
+      background: var(--card-bg);
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+      position: relative;
+      z-index: 1001;      /* above Leaflet map (400-800) */
+    }
+    .ps-search-wrap {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      background: var(--navy);
+      border: 1px solid var(--border);
+      border-radius: 2px;
+      overflow: hidden;
+      transition: border-color 0.2s;
+    }
+    .ps-search-wrap:focus-within { border-color: var(--red); }
+    .ps-search-icon {
+      padding: 0 14px;
+      color: var(--dim);
+      font-size: 1rem;
+      flex-shrink: 0;
+    }
+    #ps-search-input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      outline: none;
+      color: var(--white);
+      font-family: 'Barlow', sans-serif;
+      font-size: 0.9rem;
+      padding: 12px 0;
+    }
+    #ps-search-input::placeholder { color: var(--dim); }
+
+    /* Filter toggle button */
+    .ps-filter-btn {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 10px 18px;
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: 2px;
+      color: var(--steel);
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 0.8rem;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: border-color 0.2s, color 0.2s;
+      flex-shrink: 0;
+    }
+    .ps-filter-btn:hover, .ps-filter-btn.active {
+      border-color: var(--red);
+      color: var(--white);
+    }
+    .ps-filter-btn .count {
+      background: var(--red);
+      color: var(--white);
+      font-size: 0.65rem;
+      padding: 1px 6px;
+      border-radius: 2px;
+      min-width: 18px;
+      text-align: center;
+    }
+
+    /* Settings gear */
+    .ps-settings-btn {
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: 2px;
+      color: var(--dim);
+      padding: 10px 12px;
+      cursor: pointer;
+      font-size: 1rem;
+      transition: border-color 0.2s, color 0.2s;
+      flex-shrink: 0;
+    }
+    .ps-settings-btn:hover { border-color: var(--red); color: var(--white); }
+
+    /* Results count */
+    .ps-results-count {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 0.75rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--dim);
+      flex-shrink: 0;
+      white-space: nowrap;
+    }
+
+    /* Sort dropdown */
+    #ps-sort {
+      background: var(--navy);
+      border: 1px solid var(--border);
+      border-radius: 2px;
+      color: var(--steel);
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 0.75rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 8px 12px;
+      outline: none;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+    #ps-sort:focus { border-color: var(--red); }
+
+    /* ── FILTER PANEL (dropdown) ── */
+    .ps-filter-panel {
+      display: none;
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      background: var(--card-bg);
+      border-bottom: 1px solid var(--border);
+      padding: 20px 24px;
+      z-index: 1002;      /* above toolbar and Leaflet map */
+      box-shadow: 0 12px 40px rgba(0,0,0,0.5);
+      max-height: 70vh;
+      overflow-y: auto;
+    }
+    .ps-filter-panel.open { display: block; }
+    .ps-filter-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 20px;
+    }
+    .ps-filter-group h4 {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--red);
+      margin-bottom: 10px;
+    }
+    .ps-filter-group label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.82rem;
+      color: var(--steel);
+      cursor: pointer;
+      padding: 3px 0;
+      transition: color 0.15s;
+    }
+    .ps-filter-group label:hover { color: var(--white); }
+    .ps-filter-group input[type="checkbox"] {
+      accent-color: var(--red);
+      width: 14px;
+      height: 14px;
+      cursor: pointer;
+    }
+    .ps-range-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+    .ps-range-input {
+      width: 100%;
+      background: var(--navy);
+      border: 1px solid var(--border);
+      border-radius: 2px;
+      color: var(--white);
+      font-family: 'Barlow', sans-serif;
+      font-size: 0.8rem;
+      padding: 7px 10px;
+      outline: none;
+    }
+    .ps-range-input:focus { border-color: var(--red); }
+    .ps-range-input::placeholder { color: var(--dim); }
+    .ps-filter-actions {
+      grid-column: 1 / -1;
+      display: flex;
+      gap: 12px;
+      justify-content: flex-end;
+      padding-top: 12px;
+      border-top: 1px solid var(--border);
+    }
+    .ps-btn-sm {
+      padding: 8px 20px;
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      border-radius: 2px;
+      cursor: pointer;
+      transition: all 0.2s;
+      border: none;
+    }
+    .ps-btn-apply {
+      background: var(--red);
+      color: var(--white);
+    }
+    .ps-btn-apply:hover { background: var(--red2); }
+    .ps-btn-reset {
+      background: transparent;
+      color: var(--steel);
+      border: 1px solid var(--border);
+    }
+    .ps-btn-reset:hover { border-color: var(--white); color: var(--white); }
+
+    /* ── MAIN CONTENT ── */
+    .ps-main {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* Map */
+    .ps-map-container {
+      flex: 1;
+      min-width: 0;
+      position: relative;
+    }
+    #ps-map { width: 100%; height: 100%; }
+    .leaflet-popup-content-wrapper {
+      background: var(--card-bg) !important;
+      color: var(--white) !important;
+      border: 1px solid var(--border) !important;
+      border-radius: 4px !important;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.5) !important;
+    }
+    .leaflet-popup-tip { background: var(--card-bg) !important; }
+    .leaflet-popup-content { margin: 14px 16px !important; font-family: 'Barlow', sans-serif !important; }
+    .ps-popup-title {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 0.9rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 4px;
+    }
+    .ps-popup-sub { font-size: 0.78rem; color: var(--steel); margin-bottom: 8px; }
+    .ps-popup-badges { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
+    .ps-popup-btn {
+      display: inline-block;
+      padding: 6px 14px;
+      background: var(--red);
+      color: var(--white);
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 0.7rem;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      border: none;
+      border-radius: 2px;
+      cursor: pointer;
+      transition: background 0.2s;
+      width: 100%;
+      text-align: center;
+    }
+    .ps-popup-btn:hover { background: var(--red2); }
+
+    /* Results sidebar */
+    .ps-results {
+      width: 380px;
+      flex-shrink: 0;
+      background: var(--navy);
+      border-left: 1px solid var(--border);
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+    }
+    .ps-results-header {
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--border);
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--dim);
+      flex-shrink: 0;
+    }
+    .ps-results-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px;
+    }
+    .ps-empty-state {
+      text-align: center;
+      padding: 60px 24px;
+      color: var(--dim);
+    }
+    .ps-empty-state .icon { font-size: 2.5rem; margin-bottom: 12px; }
+    .ps-empty-state p { font-size: 0.85rem; }
+
+    /* Property card */
+    .ps-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 16px;
+      margin-bottom: 8px;
+      cursor: pointer;
+      transition: border-color 0.2s, transform 0.15s;
+    }
+    .ps-card:hover, .ps-card.active {
+      border-color: var(--red);
+      transform: translateY(-2px);
+    }
+    .ps-card-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 6px;
+    }
+    .ps-card-id {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 0.65rem;
+      letter-spacing: 0.1em;
+      color: var(--dim);
+      text-transform: uppercase;
+    }
+    .ps-card-price {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 1.3rem;
+      color: var(--red);
+      line-height: 1;
+    }
+    .ps-card-address {
+      font-family: 'Barlow', sans-serif;
+      font-size: 0.88rem;
+      font-weight: 600;
+      color: var(--white);
+      margin-bottom: 2px;
+    }
+    .ps-card-city {
+      font-size: 0.78rem;
+      color: var(--steel);
+      margin-bottom: 8px;
+    }
+    .ps-card-stats {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 8px;
+    }
+    .ps-card-stat {
+      font-size: 0.72rem;
+      color: var(--dim);
+    }
+    .ps-card-stat strong {
+      color: var(--steel);
+      font-weight: 600;
+    }
+    .ps-card-badges { display: flex; gap: 5px; flex-wrap: wrap; }
+
+    /* Badges */
+    .ps-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 2px 8px;
+      border-radius: 2px;
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 0.62rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+    .ps-badge-clean { background: rgba(34,197,94,0.15); color: #22c55e; border: 1px solid rgba(34,197,94,0.3); }
+    .ps-badge-flagged { background: rgba(234,179,8,0.15); color: #eab308; border: 1px solid rgba(234,179,8,0.3); }
+    .ps-badge-brownfield { background: rgba(239,68,68,0.15); color: #ef4444; border: 1px solid rgba(239,68,68,0.3); }
+    .ps-badge-gf { background: rgba(96,165,250,0.15); color: #60a5fa; border: 1px solid rgba(96,165,250,0.3); }
+    .ps-badge-gf-risk { background: rgba(251,146,60,0.15); color: #fb923c; border: 1px solid rgba(251,146,60,0.3); }
+    .ps-badge-gf-crit { background: rgba(239,68,68,0.15); color: #ef4444; border: 1px solid rgba(239,68,68,0.3); }
+    .ps-badge-fleet { background: rgba(139,92,246,0.15); color: #8b5cf6; border: 1px solid rgba(139,92,246,0.3); }
+    .ps-badge-title { background: rgba(236,72,153,0.15); color: #ec4899; border: 1px solid rgba(236,72,153,0.3); }
+    .ps-badge-vacant { background: rgba(107,114,128,0.15); color: #9ca3af; border: 1px solid rgba(107,114,128,0.3); }
+    .ps-badge-zoning { background: rgba(200,16,46,0.12); color: var(--red); border: 1px solid rgba(200,16,46,0.3); }
+
+    /* ── DETAIL PANEL ──
+       Positioned fixed so it overlays on top of everything
+       (map + results) without disrupting layout */
+    .ps-detail {
+      position: fixed;
+      top: 72px;          /* below nav */
+      right: 0;
+      bottom: 0;
+      width: 480px;
+      background: var(--navy);
+      border-left: 1px solid var(--border);
+      z-index: 1000;      /* above Leaflet (400) and results */
+      transform: translateX(100%);
+      transition: transform 0.3s ease;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      box-shadow: -8px 0 30px rgba(0,0,0,0.5);
+    }
+    .ps-detail.open { transform: translateX(0); }
+    .ps-detail-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 20px;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+      background: var(--card-bg);
+    }
+    .ps-detail-back {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: none;
+      border: none;
+      color: var(--steel);
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 0.78rem;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: color 0.2s;
+    }
+    .ps-detail-back:hover { color: var(--white); }
+    .ps-detail-export {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 7px 14px;
+      background: var(--red);
+      border: none;
+      border-radius: 2px;
+      color: var(--white);
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 0.7rem;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .ps-detail-export:hover { background: var(--red2); }
+    .ps-detail-body { padding: 24px 20px; flex: 1; }
+    .ps-detail-body h2 {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 1.8rem;
+      line-height: 1.05;
+      margin-bottom: 4px;
+    }
+    .ps-detail-addr {
+      font-size: 0.85rem;
+      color: var(--steel);
+      margin-bottom: 16px;
+    }
+    .ps-detail-price {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 2.2rem;
+      color: var(--red);
+      line-height: 1;
+      margin-bottom: 20px;
+    }
+    .ps-detail-stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+    .ps-detail-stat {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 2px;
+      padding: 12px;
+      text-align: center;
+    }
+    .ps-detail-stat-val {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 1.3rem;
+      color: var(--white);
+      line-height: 1;
+    }
+    .ps-detail-stat-label {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 0.62rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--dim);
+      margin-top: 4px;
+    }
+
+    /* Detail sections */
+    .ps-section {
+      margin-bottom: 24px;
+      padding-bottom: 24px;
+      border-bottom: 1px solid var(--border);
+    }
+    .ps-section:last-child { border-bottom: none; }
+    .ps-section-title {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--red);
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .ps-section-title::before {
+      content: '';
+      width: 20px;
+      height: 1px;
+      background: var(--red);
+    }
+    .ps-summary-box {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 16px;
+      font-size: 0.88rem;
+      line-height: 1.7;
+      color: var(--steel);
+    }
+    .ps-summary-box strong { color: var(--white); font-weight: 600; }
+    .ps-info-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 8px 0;
+      border-bottom: 1px solid rgba(200,16,46,0.1);
+      font-size: 0.84rem;
+    }
+    .ps-info-row:last-child { border-bottom: none; }
+    .ps-info-label { color: var(--dim); }
+    .ps-info-value { color: var(--white); font-weight: 400; text-align: right; }
+
+    /* EPA facility list */
+    .ps-epa-item {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 2px;
+      padding: 10px 14px;
+      margin-bottom: 6px;
+      font-size: 0.8rem;
+    }
+    .ps-epa-item-name {
+      color: var(--white);
+      font-weight: 600;
+      margin-bottom: 2px;
+    }
+    .ps-epa-item-detail { color: var(--dim); font-size: 0.75rem; }
+    .ps-epa-loading {
+      text-align: center;
+      padding: 20px;
+      color: var(--dim);
+      font-size: 0.82rem;
+    }
+
+    /* Grandfathered risk meter */
+    .ps-risk-meter {
+      height: 6px;
+      background: rgba(255,255,255,0.1);
+      border-radius: 3px;
+      overflow: hidden;
+      margin: 10px 0;
+    }
+    .ps-risk-fill {
+      height: 100%;
+      border-radius: 3px;
+      transition: width 0.5s ease;
+    }
+    .ps-risk-low .ps-risk-fill { width: 25%; background: #22c55e; }
+    .ps-risk-moderate .ps-risk-fill { width: 50%; background: #eab308; }
+    .ps-risk-high .ps-risk-fill { width: 75%; background: #fb923c; }
+    .ps-risk-critical .ps-risk-fill { width: 100%; background: #ef4444; }
+    .ps-risk-factors {
+      list-style: none;
+      padding: 0;
+    }
+    .ps-risk-factors li {
+      font-size: 0.8rem;
+      color: var(--steel);
+      padding: 4px 0 4px 18px;
+      position: relative;
+    }
+    .ps-risk-factors li::before {
+      content: '!';
+      position: absolute;
+      left: 0;
+      color: var(--red);
+      font-weight: 700;
+      font-size: 0.75rem;
+    }
+
+    /* Settings modal */
+    .ps-modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(10,15,30,0.85);
+      z-index: 1100;      /* above everything including Leaflet */
+      align-items: center;
+      justify-content: center;
+    }
+    .ps-modal-overlay.open { display: flex; }
+    .ps-modal {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 32px;
+      width: 90%;
+      max-width: 500px;
+    }
+    .ps-modal h3 {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 1.6rem;
+      margin-bottom: 8px;
+    }
+    .ps-modal p {
+      font-size: 0.85rem;
+      color: var(--steel);
+      margin-bottom: 20px;
+      line-height: 1.5;
+    }
+    .ps-modal .form-group { margin-bottom: 16px; }
+    .ps-modal-close {
+      position: absolute;
+      top: 12px;
+      right: 16px;
+      background: none;
+      border: none;
+      color: var(--dim);
+      font-size: 1.4rem;
+      cursor: pointer;
+    }
+
+    /* Custom map markers */
+    .ps-marker {
+      width: 28px;
+      height: 28px;
+      border-radius: 50% 50% 50% 0;
+      transform: rotate(-45deg);
+      border: 2px solid var(--white);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+    }
+    .ps-marker-inner {
+      transform: rotate(45deg);
+      font-size: 11px;
+      font-weight: 700;
+    }
+    .ps-marker-clean { background: #22c55e; }
+    .ps-marker-flagged { background: #eab308; }
+    .ps-marker-brownfield { background: #ef4444; }
+    .ps-marker-fleet { background: #8b5cf6; }
+
+    /* Responsive */
+    @media (max-width: 900px) {
+      .ps-toolbar { flex-wrap: wrap; }
+      .ps-filter-grid { grid-template-columns: 1fr 1fr; }
+      .ps-main { flex-direction: column; }
+      .ps-map-container { height: 45vh; flex: none; }
+      .ps-results { width: 100%; border-left: none; border-top: 1px solid var(--border); flex: 1; }
+      .ps-detail { width: 100%; }
+      .ps-results-count { display: none; }
+      #ps-sort { display: none; }
+    }
+    @media (max-width: 600px) {
+      .ps-filter-grid { grid-template-columns: 1fr; }
+      .ps-detail-stats { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ════════════════════════════════════════════
+       NAVIGATION — matches existing ARES pages
+       Add "Property Search" link to other pages' navs separately
+       ════════════════════════════════════════════ -->
+  <nav>
+    <a class="nav-logo" href="index.html">
+      <img src="assets/logo.png" alt="ARES Automotive Real Estate Solutions Logo" />
+    </a>
+    <button class="hamburger" aria-label="Toggle menu">
+      <span></span><span></span><span></span>
+    </button>
+    <ul>
+    <ul>
+      <li><a href="index.html">Home</a></li>
+      <li><a href="why-this-matters.html">Why This Matters</a></li>
+      <li><a href="offer.html">Our Offer</a></li>
+      <li><a href="property-search.html" class="active">Property Search</a></li>
+      <li><a href="value-proposition.html">Value Proposition</a></li>
+      <li><a href="about.html">About</a></li>
+      <li><a href="faq.html">FAQ</a></li>
+      <li><a href="blog.html">Blog</a></li>
+      <li><a href="contact.html" class="nav-cta">Contact Us</a></li>
+    </ul>
+  </ul>
+  </nav>
+
+  <!-- ════════════════════════════════════════════
+       APP CONTAINER
+       ════════════════════════════════════════════ -->
+  <div class="ps-app">
+
+    <!-- SEARCH TOOLBAR -->
+    <div class="ps-toolbar">
+      <div class="ps-search-wrap">
+        <span class="ps-search-icon">&#128269;</span>
+        <input type="text" id="ps-search-input" placeholder="Search by city, address, county, or keyword..." />
+      </div>
+      <button class="ps-filter-btn" id="ps-filter-toggle">
+        &#9881; Filters <span class="count" id="ps-filter-count" style="display:none;">0</span>
+      </button>
+      <select id="ps-sort">
+        <option value="price-asc">Price: Low–High</option>
+        <option value="price-desc">Price: High–Low</option>
+        <option value="lot-desc">Lot Size: Largest</option>
+        <option value="risk-desc">GF Risk: Highest</option>
+      </select>
+      <span class="ps-results-count" id="ps-results-count">0 properties</span>
+      <button class="ps-settings-btn" id="ps-settings-toggle" title="AI Settings">&#9881;</button>
+
+      <!-- FILTER PANEL (dropdown) -->
+      <div class="ps-filter-panel" id="ps-filter-panel">
+        <div class="ps-filter-grid">
+
+          <!-- Property Type -->
+          <div class="ps-filter-group">
+            <h4>Property Type</h4>
+            <label><input type="checkbox" name="ptype" value="retail-auto" checked /> Retail Automotive</label>
+            <label><input type="checkbox" name="ptype" value="fleet" checked /> Fleet / Government</label>
+            <label><input type="checkbox" name="ptype" value="commercial-vehicle" checked /> Commercial Vehicle</label>
+            <label><input type="checkbox" name="ptype" value="industrial" checked /> General Industrial</label>
+          </div>
+
+          <!-- Zoning -->
+          <div class="ps-filter-group">
+            <h4>Zoning</h4>
+            <label><input type="checkbox" name="zoning" value="M1" checked /> M1 — Light Industrial</label>
+            <label><input type="checkbox" name="zoning" value="M2" checked /> M2 — Heavy Industrial</label>
+            <label><input type="checkbox" name="zoning" value="C2" checked /> C2 — Commercial</label>
+            <label><input type="checkbox" name="zoning" value="MU" checked /> Mixed Use</label>
+            <label><input type="checkbox" name="zoning" value="AUTO" checked /> Auto-Specific</label>
+          </div>
+
+          <!-- EPA Status -->
+          <div class="ps-filter-group">
+            <h4>EPA Status</h4>
+            <label><input type="checkbox" name="epa" value="clean" checked /> &#9989; Clean</label>
+            <label><input type="checkbox" name="epa" value="flagged" checked /> &#9888; Flagged</label>
+            <label><input type="checkbox" name="epa" value="brownfield" checked /> &#9940; Brownfield</label>
+          </div>
+
+          <!-- Grandfathered -->
+          <div class="ps-filter-group">
+            <h4>Grandfathered Status</h4>
+            <label><input type="checkbox" name="gf" value="active" checked /> Active (Protected)</label>
+            <label><input type="checkbox" name="gf" value="at-risk" checked /> At Risk</label>
+            <label><input type="checkbox" name="gf" value="none" checked /> Not Grandfathered</label>
+          </div>
+
+          <!-- County -->
+          <div class="ps-filter-group">
+            <h4>County</h4>
+            <label><input type="checkbox" name="county" value="Thurston" checked /> Thurston</label>
+            <label><input type="checkbox" name="county" value="Pierce" checked /> Pierce</label>
+            <label><input type="checkbox" name="county" value="King" checked /> King</label>
+            <label><input type="checkbox" name="county" value="Snohomish" checked /> Snohomish</label>
+            <label><input type="checkbox" name="county" value="Clark" checked /> Clark</label>
+            <label><input type="checkbox" name="county" value="Kitsap" checked /> Kitsap</label>
+            <label><input type="checkbox" name="county" value="Whatcom" checked /> Whatcom</label>
+          </div>
+
+          <!-- Vacancy -->
+          <div class="ps-filter-group">
+            <h4>Vacancy</h4>
+            <label><input type="checkbox" name="vacancy" value="occupied" checked /> Occupied</label>
+            <label><input type="checkbox" name="vacancy" value="vacant" checked /> Vacant</label>
+          </div>
+
+          <!-- Deed Restrictions -->
+          <div class="ps-filter-group">
+            <h4>Title / Deed</h4>
+            <label><input type="checkbox" id="filter-deed-only" /> Show flagged only</label>
+            <label><input type="checkbox" id="filter-title-avail" /> Has title data</label>
+          </div>
+
+          <!-- Ranges -->
+          <div class="ps-filter-group">
+            <h4>Lot Size (sq ft)</h4>
+            <div class="ps-range-row">
+              <input type="number" class="ps-range-input" id="lot-min" placeholder="Min" />
+              <span style="color:var(--dim);">—</span>
+              <input type="number" class="ps-range-input" id="lot-max" placeholder="Max" />
+            </div>
+            <h4 style="margin-top:14px;">Price ($)</h4>
+            <div class="ps-range-row">
+              <input type="number" class="ps-range-input" id="price-min" placeholder="Min" />
+              <span style="color:var(--dim);">—</span>
+              <input type="number" class="ps-range-input" id="price-max" placeholder="Max" />
+            </div>
+            <h4 style="margin-top:14px;">Building (sq ft)</h4>
+            <div class="ps-range-row">
+              <input type="number" class="ps-range-input" id="bldg-min" placeholder="Min" />
+              <span style="color:var(--dim);">—</span>
+              <input type="number" class="ps-range-input" id="bldg-max" placeholder="Max" />
+            </div>
+          </div>
+
+          <!-- Actions -->
+          <div class="ps-filter-actions">
+            <button class="ps-btn-sm ps-btn-reset" id="ps-filter-reset">Reset All</button>
+            <button class="ps-btn-sm ps-btn-apply" id="ps-filter-apply">Apply Filters</button>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- MAIN LAYOUT: Map + Results -->
+    <div class="ps-main">
+      <div class="ps-map-container">
+        <div id="ps-map"></div>
+      </div>
+      <div class="ps-results" id="ps-results">
+        <div class="ps-results-header">Property Results</div>
+        <div class="ps-results-list" id="ps-results-list">
+          <!-- Cards injected by JS -->
+        </div>
+      </div>
+
+      <!-- DETAIL PANEL (slides in from right) -->
+      <div class="ps-detail" id="ps-detail">
+        <div class="ps-detail-header">
+          <button class="ps-detail-back" id="ps-detail-close">&#8592; Back to Results</button>
+          <button class="ps-detail-export" id="ps-detail-export">&#128196; Export PDF</button>
+        </div>
+        <div class="ps-detail-body" id="ps-detail-body">
+          <!-- Content injected by JS -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SETTINGS MODAL -->
+  <div class="ps-modal-overlay" id="ps-settings-modal">
+    <div class="ps-modal" style="position:relative;">
+      <button class="ps-modal-close" id="ps-settings-close">&times;</button>
+      <h3>AI <span style="color:var(--red);">Settings</span></h3>
+      <p>Enable AI-powered plain-language property summaries using the Anthropic Claude API. Requires a CORS proxy for client-side use.</p>
+      <div class="form-group">
+        <label>Anthropic API Key</label>
+        <input type="password" id="setting-api-key" placeholder="sk-ant-..." />
+      </div>
+      <div class="form-group">
+        <label>CORS Proxy URL (optional)</label>
+        <input type="text" id="setting-proxy-url" placeholder="https://your-proxy.example.com" />
+      </div>
+      <p style="font-size:0.75rem; color:var(--dim);">Without a proxy, the tool uses smart template-based summaries that work instantly with no API needed. Your API key is stored only in your browser's localStorage.</p>
+      <button class="ps-btn-sm ps-btn-apply" id="ps-settings-save" style="width:100%; margin-top:8px;">Save Settings</button>
+    </div>
+  </div>
+
+  <!-- FOOTER — matches existing ARES pages -->
+  <footer>
+    <img src="assets/logo.png" alt="ARES Logo" />
+        <ul class="footer-links">
+      <li><a href="index.html">Home</a></li>
+      <li><a href="why-this-matters.html">Why This Matters</a></li>
+      <li><a href="offer.html">Our Offer</a></li>
+      <li><a href="property-search.html">Property Search</a></li>
+      <li><a href="value-proposition.html">Value Proposition</a></li>
+      <li><a href="about.html">About</a></li>
+      <li><a href="faq.html">FAQ</a></li>
+      <li><a href="blog.html">Blog</a></li>
+      <li><a href="contact.html">Contact</a></li>
+    </ul>
+    <p>&copy; 2026 ARES — Automotive Real Estate Solutions. South Sound, Washington State.</p>
+  </footer>
+
+  <!-- ════════════════════════════════════════════
+       EXTERNAL LIBRARIES
+       ════════════════════════════════════════════ -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+  <!-- ARES shared JS (hamburger, scroll-reveal, active-nav) -->
+  <script src="assets/main.js"></script>
+
+  <!-- ════════════════════════════════════════════
+       APPLICATION JAVASCRIPT
+       Phase 2 will populate this script block
+       ════════════════════════════════════════════ -->
+  <script>
+  /* ============================================================
+     ARES Property Search — Application JavaScript
+     Features: Map search, EPA integration, grandfathered tracking,
+               fleet facility search, title flags, AI summaries, PDF export
+     ============================================================ */
+
+  (function() {
+    'use strict';
+
+    /* ── CONFIGURATION ── */
+    const CONFIG = {
+      mapCenter: [47.15, -122.5],   // Western WA center
+      mapZoom: 9,
+      epaEchoBase: 'https://echodata.epa.gov/echo/echo_rest_services.get_facilities',
+      epaRadiusMiles: 2,
+      anthropicModel: 'claude-sonnet-4-20250514',
+      grandfatherVacancyWarningMonths: 6,
+      grandfatherVacancyCriticalMonths: 18
+    };
+
+    /* ── DEMO PROPERTY DATA ──
+       In production, replace this array with API calls to Attom Data,
+       Regrid, CoStar, or county assessor APIs.
+       Each property object drives every feature in the tool. */
+    const PROPERTIES = [
+      {
+        id:'THR-001', address:'2814 Harrison Ave NW', city:'Olympia', county:'Thurston',
+        zip:'98502', lat:47.0477, lng:-122.9372, price:875000,
+        lotSqFt:18500, bldgSqFt:6200, zoning:'M1', zoningLabel:'Light Industrial',
+        propertyType:'retail-auto', description:'Former auto body and paint shop with 3-bay garage, paint booth room, and front office on high-traffic Harrison corridor.',
+        yearBuilt:1978, currentUse:'Auto Body Shop', lastActiveDate:'2025-08-15',
+        isVacant:true, vacantSince:'2025-08-15', isGrandfathered:true,
+        epaStatus:'flagged', fleetSuitable:false, fleetFeatures:[],
+        titleFlags:[], deedRestrictions:[], hasTitleData:true,
+        grandfatherRiskFactors:['Vacant 7+ months — approaching review threshold'],
+        listingSource:'Thurston County Assessor'
+      },
+      {
+        id:'THR-002', address:'4280 Martin Way E', city:'Olympia', county:'Thurston',
+        zip:'98516', lat:47.0420, lng:-122.8345, price:1350000,
+        lotSqFt:42000, bldgSqFt:0, zoning:'M2', zoningLabel:'Heavy Industrial',
+        propertyType:'industrial', description:'Large vacant industrial lot on Martin Way corridor, heavy industrial zoning allows wide range of automotive and fleet operations.',
+        yearBuilt:0, currentUse:'Vacant Land', lastActiveDate:null,
+        isVacant:true, vacantSince:null, isGrandfathered:false,
+        epaStatus:'clean', fleetSuitable:true, fleetFeatures:['Large lot','Heavy industrial zoning','Highway access'],
+        titleFlags:[], deedRestrictions:[], hasTitleData:true,
+        grandfatherRiskFactors:[],
+        listingSource:'Thurston County Assessor'
+      },
+      {
+        id:'THR-003', address:'1920 Black Lake Blvd SW', city:'Tumwater', county:'Thurston',
+        zip:'98512', lat:46.9912, lng:-122.9185, price:1100000,
+        lotSqFt:35000, bldgSqFt:12000, zoning:'C2', zoningLabel:'General Commercial',
+        propertyType:'retail-auto', description:'Former auto dealership with showroom, service bays, and customer lot. High visibility location near I-5.',
+        yearBuilt:1992, currentUse:'Former Dealership', lastActiveDate:'2024-11-01',
+        isVacant:true, vacantSince:'2024-11-01', isGrandfathered:true,
+        epaStatus:'clean', fleetSuitable:false, fleetFeatures:[],
+        titleFlags:['Environmental covenant on file'], deedRestrictions:['Stormwater management plan required'], hasTitleData:true,
+        grandfatherRiskFactors:['Vacant 16+ months — HIGH risk of losing nonconforming use','Jurisdiction requires active use within 18 months'],
+        listingSource:'Thurston County Assessor'
+      },
+      {
+        id:'THR-004', address:'3400 Pacific Ave SE', city:'Olympia', county:'Thurston',
+        zip:'98501', lat:47.0300, lng:-122.8850, price:2200000,
+        lotSqFt:68000, bldgSqFt:22000, zoning:'M1', zoningLabel:'Light Industrial',
+        propertyType:'fleet', description:'Fleet-ready warehouse with 6 drive-through maintenance bays, truck-height doors, fenced yard, and office space.',
+        yearBuilt:2001, currentUse:'Warehouse / Fleet', lastActiveDate:'2026-02-01',
+        isVacant:false, vacantSince:null, isGrandfathered:false,
+        epaStatus:'clean', fleetSuitable:true, fleetFeatures:['6 maintenance bays','Truck-height doors','Fenced yard','Office space'],
+        titleFlags:[], deedRestrictions:[], hasTitleData:true,
+        grandfatherRiskFactors:[],
+        listingSource:'Thurston County Assessor'
+      },
+      {
+        id:'THR-005', address:'5800 Lacey Blvd SE', city:'Lacey', county:'Thurston',
+        zip:'98503', lat:47.0380, lng:-122.8110, price:650000,
+        lotSqFt:14000, bldgSqFt:5500, zoning:'C2', zoningLabel:'General Commercial',
+        propertyType:'retail-auto', description:'Auto parts warehouse and retail shop with loading dock and customer parking.',
+        yearBuilt:1985, currentUse:'Auto Parts Retail', lastActiveDate:'2026-01-15',
+        isVacant:false, vacantSince:null, isGrandfathered:true,
+        epaStatus:'clean', fleetSuitable:false, fleetFeatures:[],
+        titleFlags:['Deed restriction: automotive use only'], deedRestrictions:['Automotive use only covenant','No hazardous chemical storage above EPA minimums'], hasTitleData:true,
+        grandfatherRiskFactors:[],
+        listingSource:'Thurston County Assessor'
+      },
+      {
+        id:'PIE-001', address:'5412 S Tacoma Way', city:'Tacoma', county:'Pierce',
+        zip:'98409', lat:47.2150, lng:-122.4700, price:780000,
+        lotSqFt:12000, bldgSqFt:4800, zoning:'M1', zoningLabel:'Light Industrial',
+        propertyType:'retail-auto', description:'Active auto repair shop with 4 lifts, alignment rack, and customer lobby. Established business corridor.',
+        yearBuilt:1974, currentUse:'Auto Repair', lastActiveDate:'2026-03-01',
+        isVacant:false, vacantSince:null, isGrandfathered:true,
+        epaStatus:'clean', fleetSuitable:false, fleetFeatures:[],
+        titleFlags:[], deedRestrictions:[], hasTitleData:true,
+        grandfatherRiskFactors:[],
+        listingSource:'Pierce County Assessor'
+      },
+      {
+        id:'PIE-002', address:'8200 Steilacoom Blvd SW', city:'Lakewood', county:'Pierce',
+        zip:'98498', lat:47.1680, lng:-122.5250, price:420000,
+        lotSqFt:28000, bldgSqFt:0, zoning:'M2', zoningLabel:'Heavy Industrial',
+        propertyType:'industrial', description:'Brownfield site — former industrial fuel storage. Deep discount due to remediation needs. Phase II ESA completed 2023.',
+        yearBuilt:0, currentUse:'Vacant Brownfield', lastActiveDate:null,
+        isVacant:true, vacantSince:'2020-03-01', isGrandfathered:false,
+        epaStatus:'brownfield', fleetSuitable:false, fleetFeatures:[],
+        titleFlags:['Environmental lien on title','Remediation covenant'], deedRestrictions:['Institutional controls — groundwater monitoring required','Soil vapor extraction system must be maintained'], hasTitleData:true,
+        grandfatherRiskFactors:[],
+        listingSource:'Pierce County Assessor / WA Ecology'
+      },
+      {
+        id:'PIE-003', address:'12015 Meridian Ave E', city:'Puyallup', county:'Pierce',
+        zip:'98373', lat:47.1750, lng:-122.2930, price:3100000,
+        lotSqFt:95000, bldgSqFt:30000, zoning:'M2', zoningLabel:'Heavy Industrial',
+        propertyType:'fleet', description:'Large industrial complex with heavy vehicle bays, wash station, fuel island, and fenced equipment yard. Ideal for fleet operations.',
+        yearBuilt:2008, currentUse:'Fleet Maintenance', lastActiveDate:'2026-02-15',
+        isVacant:false, vacantSince:null, isGrandfathered:false,
+        epaStatus:'clean', fleetSuitable:true, fleetFeatures:['Heavy vehicle bays','Wash station','Fuel island','Equipment yard','Weight scale'],
+        titleFlags:[], deedRestrictions:[], hasTitleData:true,
+        grandfatherRiskFactors:[],
+        listingSource:'Pierce County Assessor'
+      },
+      {
+        id:'PIE-004', address:'3818 Pacific Ave', city:'Tacoma', county:'Pierce',
+        zip:'98418', lat:47.2340, lng:-122.4480, price:510000,
+        lotSqFt:10000, bldgSqFt:3200, zoning:'C2', zoningLabel:'General Commercial',
+        propertyType:'retail-auto', description:'Former tire and brake shop, vacant 22 months. Grandfathered nonconforming status at critical risk.',
+        yearBuilt:1969, currentUse:'Former Tire Shop', lastActiveDate:'2024-05-01',
+        isVacant:true, vacantSince:'2024-05-01', isGrandfathered:true,
+        epaStatus:'flagged', fleetSuitable:false, fleetFeatures:[],
+        titleFlags:[], deedRestrictions:['Height restriction: 35ft max'], hasTitleData:true,
+        grandfatherRiskFactors:['Vacant 22 months — EXCEEDS typical nonconforming use window','Pierce County requires active use within 12 months of vacancy','Building needs structural repair (roof, foundation cracks)'],
+        listingSource:'Pierce County Assessor'
+      },
+      {
+        id:'PIE-005', address:'1200 E Valley Rd', city:'Sumner', county:'Pierce',
+        zip:'98390', lat:47.2030, lng:-122.2380, price:2750000,
+        lotSqFt:80000, bldgSqFt:25000, zoning:'M1', zoningLabel:'Light Industrial',
+        propertyType:'commercial-vehicle', description:'Commercial vehicle service and logistics hub with 8 bays, refrigeration maintenance capability, and DOT inspection lane.',
+        yearBuilt:2012, currentUse:'Commercial Vehicle Service', lastActiveDate:'2026-02-20',
+        isVacant:false, vacantSince:null, isGrandfathered:false,
+        epaStatus:'clean', fleetSuitable:true, fleetFeatures:['8 service bays','DOT inspection lane','Refrigeration maintenance','Loading docks'],
+        titleFlags:[], deedRestrictions:[], hasTitleData:true,
+        grandfatherRiskFactors:[],
+        listingSource:'Pierce County Assessor'
+      },
+      {
+        id:'KIN-001', address:'25207 Pacific Hwy S', city:'Kent', county:'King',
+        zip:'98032', lat:47.3750, lng:-122.2960, price:920000,
+        lotSqFt:16000, bldgSqFt:4000, zoning:'C2', zoningLabel:'General Commercial',
+        propertyType:'retail-auto', description:'Former gas station and convenience store. Underground storage tanks decommissioned 2019. Phase I ESA recommends further investigation.',
+        yearBuilt:1982, currentUse:'Former Gas Station', lastActiveDate:'2024-08-01',
+        isVacant:true, vacantSince:'2024-08-01', isGrandfathered:true,
+        epaStatus:'flagged', fleetSuitable:false, fleetFeatures:[],
+        titleFlags:['UST decommission recorded','Environmental covenant'], deedRestrictions:['Groundwater monitoring covenant'], hasTitleData:true,
+        grandfatherRiskFactors:['Vacant 7 months','Site may require environmental remediation before reuse'],
+        listingSource:'King County Assessor'
+      },
+      {
+        id:'KIN-002', address:'4102 Auburn Way N', city:'Auburn', county:'King',
+        zip:'98002', lat:47.3180, lng:-122.2230, price:1650000,
+        lotSqFt:45000, bldgSqFt:15000, zoning:'M1', zoningLabel:'Light Industrial',
+        propertyType:'industrial', description:'Industrial parcel with existing warehouse, roll-up doors, and paved yard. Strong candidate for automotive conversion.',
+        yearBuilt:1996, currentUse:'General Warehouse', lastActiveDate:'2026-01-01',
+        isVacant:false, vacantSince:null, isGrandfathered:false,
+        epaStatus:'clean', fleetSuitable:true, fleetFeatures:['Roll-up doors','Paved yard','Warehouse space'],
+        titleFlags:[], deedRestrictions:[], hasTitleData:true,
+        grandfatherRiskFactors:[],
+        listingSource:'King County Assessor'
+      },
+      {
+        id:'KIN-003', address:'13240 Tukwila Intl Blvd', city:'Tukwila', county:'King',
+        zip:'98168', lat:47.4720, lng:-122.2810, price:1200000,
+        lotSqFt:20000, bldgSqFt:8000, zoning:'AUTO', zoningLabel:'Auto-Specific',
+        propertyType:'retail-auto', description:'Active auto service center with 6 bays, alignment rack, tire machine, and customer lounge. Auto-specific zoning protects use.',
+        yearBuilt:1988, currentUse:'Auto Service Center', lastActiveDate:'2026-03-01',
+        isVacant:false, vacantSince:null, isGrandfathered:true,
+        epaStatus:'clean', fleetSuitable:false, fleetFeatures:[],
+        titleFlags:[], deedRestrictions:[], hasTitleData:true,
+        grandfatherRiskFactors:[],
+        listingSource:'King County Assessor'
+      },
+      {
+        id:'KIN-004', address:'800 SW Grady Way', city:'Renton', county:'King',
+        zip:'98057', lat:47.4810, lng:-122.2190, price:4200000,
+        lotSqFt:120000, bldgSqFt:40000, zoning:'M2', zoningLabel:'Heavy Industrial',
+        propertyType:'fleet', description:'Major fleet maintenance complex: 12 bays, heavy equipment lifts, parts warehouse, admin offices, fuel depot. Suitable for state/federal fleet contracts.',
+        yearBuilt:2005, currentUse:'Fleet Maintenance Complex', lastActiveDate:'2026-02-28',
+        isVacant:false, vacantSince:null, isGrandfathered:false,
+        epaStatus:'clean', fleetSuitable:true, fleetFeatures:['12 maintenance bays','Heavy equipment lifts','Parts warehouse','Fuel depot','Admin offices'],
+        titleFlags:[], deedRestrictions:[], hasTitleData:true,
+        grandfatherRiskFactors:[],
+        listingSource:'King County Assessor'
+      },
+      {
+        id:'SNO-001', address:'4515 Rucker Ave', city:'Everett', county:'Snohomish',
+        zip:'98201', lat:47.9820, lng:-122.2050, price:1450000,
+        lotSqFt:32000, bldgSqFt:10000, zoning:'M1', zoningLabel:'Light Industrial',
+        propertyType:'industrial', description:'Industrial lot with clear-span building near Port of Everett. Good access to I-5 and Boeing corridor.',
+        yearBuilt:1990, currentUse:'Light Manufacturing', lastActiveDate:'2026-01-15',
+        isVacant:false, vacantSince:null, isGrandfathered:false,
+        epaStatus:'clean', fleetSuitable:true, fleetFeatures:['Clear-span building','I-5 access','Port proximity'],
+        titleFlags:[], deedRestrictions:[], hasTitleData:false,
+        grandfatherRiskFactors:[],
+        listingSource:'Snohomish County Assessor'
+      },
+      {
+        id:'SNO-002', address:'7115 State Ave', city:'Marysville', county:'Snohomish',
+        zip:'98270', lat:48.0510, lng:-122.1770, price:890000,
+        lotSqFt:22000, bldgSqFt:7500, zoning:'MU', zoningLabel:'Mixed Use',
+        propertyType:'retail-auto', description:'Former car dealership — showroom plus 3 service bays. Mixed use zone limits new auto permits but grandfathered use may continue.',
+        yearBuilt:1995, currentUse:'Former Dealership', lastActiveDate:'2025-06-01',
+        isVacant:true, vacantSince:'2025-06-01', isGrandfathered:true,
+        epaStatus:'clean', fleetSuitable:false, fleetFeatures:[],
+        titleFlags:[], deedRestrictions:['Signage height restriction'], hasTitleData:true,
+        grandfatherRiskFactors:['Vacant 9 months','Mixed-use zone — new auto permits unlikely if grandfathered status lost'],
+        listingSource:'Snohomish County Assessor'
+      },
+      {
+        id:'CLK-001', address:'8714 NE Hwy 99', city:'Vancouver', county:'Clark',
+        zip:'98665', lat:45.6650, lng:-122.6620, price:980000,
+        lotSqFt:24000, bldgSqFt:6000, zoning:'AUTO', zoningLabel:'Auto-Specific',
+        propertyType:'retail-auto', description:'Auto-zoned lot on Hwy 99 auto row. Currently operating as used car lot with small service garage.',
+        yearBuilt:1980, currentUse:'Used Car Lot', lastActiveDate:'2026-02-15',
+        isVacant:false, vacantSince:null, isGrandfathered:true,
+        epaStatus:'clean', fleetSuitable:false, fleetFeatures:[],
+        titleFlags:[], deedRestrictions:[], hasTitleData:true,
+        grandfatherRiskFactors:[],
+        listingSource:'Clark County Assessor'
+      },
+      {
+        id:'CLK-002', address:'4200 NE 78th St', city:'Vancouver', county:'Clark',
+        zip:'98665', lat:45.6580, lng:-122.6450, price:375000,
+        lotSqFt:30000, bldgSqFt:0, zoning:'M1', zoningLabel:'Light Industrial',
+        propertyType:'industrial', description:'Brownfield — former dry cleaning solvent facility. Significant soil contamination. Deep discount, requires remediation.',
+        yearBuilt:0, currentUse:'Vacant Brownfield', lastActiveDate:null,
+        isVacant:true, vacantSince:'2018-01-01', isGrandfathered:false,
+        epaStatus:'brownfield', fleetSuitable:false, fleetFeatures:[],
+        titleFlags:['Environmental lien','Remediation deed restriction'], deedRestrictions:['Institutional controls — vapor intrusion mitigation required','Land use restricted to commercial/industrial'], hasTitleData:true,
+        grandfatherRiskFactors:[],
+        listingSource:'Clark County / WA Ecology'
+      },
+      {
+        id:'CLK-003', address:'11304 NE Fourth Plain Blvd', city:'Vancouver', county:'Clark',
+        zip:'98662', lat:45.6370, lng:-122.5980, price:720000,
+        lotSqFt:15000, bldgSqFt:5000, zoning:'C2', zoningLabel:'General Commercial',
+        propertyType:'retail-auto', description:'Former service station with auto repair. USTs removed 2020, monitoring wells active.',
+        yearBuilt:1975, currentUse:'Former Service Station', lastActiveDate:'2025-03-01',
+        isVacant:true, vacantSince:'2025-03-01', isGrandfathered:true,
+        epaStatus:'flagged', fleetSuitable:false, fleetFeatures:[],
+        titleFlags:['UST removal documented','Active monitoring wells'], deedRestrictions:['Groundwater monitoring required through 2028'], hasTitleData:true,
+        grandfatherRiskFactors:['Vacant 12 months','Environmental remediation may require site alterations'],
+        listingSource:'Clark County Assessor'
+      },
+      {
+        id:'KIT-001', address:'5550 Auto Center Way', city:'Bremerton', county:'Kitsap',
+        zip:'98312', lat:47.5680, lng:-122.6290, price:1800000,
+        lotSqFt:55000, bldgSqFt:18000, zoning:'AUTO', zoningLabel:'Auto-Specific',
+        propertyType:'fleet', description:'Auto Center Way corridor — large auto-zoned facility with fleet maintenance capability, customer service area, and parts storage.',
+        yearBuilt:2002, currentUse:'Auto Dealership / Service', lastActiveDate:'2026-02-01',
+        isVacant:false, vacantSince:null, isGrandfathered:false,
+        epaStatus:'clean', fleetSuitable:true, fleetFeatures:['Fleet bays','Parts storage','Auto-zoned corridor'],
+        titleFlags:[], deedRestrictions:[], hasTitleData:true,
+        grandfatherRiskFactors:[],
+        listingSource:'Kitsap County Assessor'
+      },
+      {
+        id:'WHA-001', address:'1425 Iowa St', city:'Bellingham', county:'Whatcom',
+        zip:'98229', lat:48.7600, lng:-122.4880, price:1250000,
+        lotSqFt:38000, bldgSqFt:12000, zoning:'M1', zoningLabel:'Light Industrial',
+        propertyType:'industrial', description:'Industrial parcel near I-5 corridor. Clear-span steel building suitable for vehicle service or fleet operations.',
+        yearBuilt:1998, currentUse:'Industrial Warehouse', lastActiveDate:'2026-01-20',
+        isVacant:false, vacantSince:null, isGrandfathered:false,
+        epaStatus:'clean', fleetSuitable:true, fleetFeatures:['Clear-span steel building','I-5 proximity','Loading docks'],
+        titleFlags:[], deedRestrictions:[], hasTitleData:false,
+        grandfatherRiskFactors:[],
+        listingSource:'Whatcom County Assessor'
+      }
+    ];
+
+    /* County assessor portal reference links */
+    const COUNTY_PORTALS = {
+      'Thurston': 'https://tcproperty.co.thurston.wa.us',
+      'Pierce':   'https://epip.co.pierce.wa.us',
+      'King':     'https://blue.kingcounty.com/Assessor/eRealProperty',
+      'Snohomish':'https://snohomishcountywa.gov/assessor',
+      'Clark':    'https://gis.clark.wa.gov',
+      'Kitsap':   'https://psearch.kitsapgov.com',
+      'Whatcom':  'https://property.whatcomcounty.us'
+    };
+
+    /* ── APPLICATION STATE ── */
+    const STATE = {
+      map: null,
+      markers: {},
+      markerLayer: null,
+      filteredProperties: [...PROPERTIES],
+      selectedProperty: null,
+      settings: JSON.parse(localStorage.getItem('ares_ps_settings') || '{"apiKey":"","proxyUrl":""}')
+    };
+
+    /* ── UTILITY FUNCTIONS ── */
+    function formatPrice(n) {
+      if (n >= 1000000) return '$' + (n / 1000000).toFixed(1) + 'M';
+      return '$' + (n / 1000).toFixed(0) + 'K';
+    }
+    function formatSqFt(n) {
+      if (!n) return 'N/A';
+      return n.toLocaleString() + ' sf';
+    }
+    function acresFromSqFt(n) { return (n / 43560).toFixed(2); }
+    function monthsSince(dateStr) {
+      if (!dateStr) return null;
+      const d = new Date(dateStr);
+      const now = new Date();
+      return Math.round((now - d) / (1000 * 60 * 60 * 24 * 30.44));
+    }
+    function getGrandfatherRisk(p) {
+      if (!p.isGrandfathered) return 'none';
+      if (!p.isVacant) return 'low';
+      const months = monthsSince(p.vacantSince);
+      if (months === null) return 'low';
+      if (months >= CONFIG.grandfatherVacancyCriticalMonths) return 'critical';
+      if (months >= 12) return 'high';
+      if (months >= CONFIG.grandfatherVacancyWarningMonths) return 'moderate';
+      return 'low';
+    }
+    function getGfFilterCategory(p) {
+      if (!p.isGrandfathered) return 'none';
+      const risk = getGrandfatherRisk(p);
+      return (risk === 'low') ? 'active' : 'at-risk';
+    }
+
+    /* ── MAP INITIALIZATION ── */
+    function initMap() {
+      STATE.map = L.map('ps-map', {
+        center: CONFIG.mapCenter,
+        zoom: CONFIG.mapZoom,
+        zoomControl: true,
+        attributionControl: true
+      });
+
+      /* Dark-themed tile layer (free, no key) */
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/">CARTO</a>',
+        subdomains: 'abcd',
+        maxZoom: 19
+      }).addTo(STATE.map);
+
+      STATE.markerLayer = L.layerGroup().addTo(STATE.map);
+    }
+
+    /* Create custom colored marker icon */
+    function createMarkerIcon(epaStatus, fleetSuitable) {
+      let cls = 'ps-marker-clean';
+      let emoji = '&#9679;';
+      if (fleetSuitable) { cls = 'ps-marker-fleet'; emoji = '&#9733;'; }
+      if (epaStatus === 'flagged') { cls = 'ps-marker-flagged'; emoji = '&#9888;'; }
+      if (epaStatus === 'brownfield') { cls = 'ps-marker-brownfield'; emoji = '&#9940;'; }
+      return L.divIcon({
+        className: '',
+        html: '<div class="ps-marker ' + cls + '"><span class="ps-marker-inner">' + emoji + '</span></div>',
+        iconSize: [28, 28],
+        iconAnchor: [14, 28],
+        popupAnchor: [0, -30]
+      });
+    }
+
+    /* ── BADGE HTML GENERATORS ── */
+    function epaBadge(status) {
+      const map = {
+        clean: '<span class="ps-badge ps-badge-clean">&#9989; Clean</span>',
+        flagged: '<span class="ps-badge ps-badge-flagged">&#9888; EPA Flagged</span>',
+        brownfield: '<span class="ps-badge ps-badge-brownfield">&#9940; Brownfield</span>'
+      };
+      return map[status] || '';
+    }
+    function gfBadge(p) {
+      if (!p.isGrandfathered) return '';
+      const risk = getGrandfatherRisk(p);
+      if (risk === 'low') return '<span class="ps-badge ps-badge-gf">&#128274; Grandfathered</span>';
+      if (risk === 'moderate') return '<span class="ps-badge ps-badge-gf-risk">&#9888; GF At Risk</span>';
+      if (risk === 'high') return '<span class="ps-badge ps-badge-gf-risk">&#128308; GF High Risk</span>';
+      return '<span class="ps-badge ps-badge-gf-crit">&#128680; GF Critical</span>';
+    }
+    function fleetBadge(p) {
+      return p.fleetSuitable ? '<span class="ps-badge ps-badge-fleet">&#9733; Fleet Ready</span>' : '';
+    }
+    function titleBadge(p) {
+      return (p.titleFlags.length || p.deedRestrictions.length) ? '<span class="ps-badge ps-badge-title">&#128203; Title Flags</span>' : '';
+    }
+    function vacantBadge(p) {
+      return p.isVacant ? '<span class="ps-badge ps-badge-vacant">Vacant</span>' : '';
+    }
+    function zoningBadge(p) {
+      return '<span class="ps-badge ps-badge-zoning">' + p.zoning + '</span>';
+    }
+    function allBadges(p) {
+      return zoningBadge(p) + epaBadge(p.epaStatus) + gfBadge(p) + fleetBadge(p) + titleBadge(p) + vacantBadge(p);
+    }
+
+    /* ── RENDER PROPERTY CARD (results list) ── */
+    function renderCard(p) {
+      return '<div class="ps-card" data-id="' + p.id + '" onclick="document.dispatchEvent(new CustomEvent(\'ps-select\',{detail:\'' + p.id + '\'}))">' +
+        '<div class="ps-card-top">' +
+          '<span class="ps-card-id">' + p.id + '</span>' +
+          '<span class="ps-card-price">' + formatPrice(p.price) + '</span>' +
+        '</div>' +
+        '<div class="ps-card-address">' + p.address + '</div>' +
+        '<div class="ps-card-city">' + p.city + ', ' + p.county + ' County, WA ' + p.zip + '</div>' +
+        '<div class="ps-card-stats">' +
+          '<span class="ps-card-stat"><strong>' + formatSqFt(p.lotSqFt) + '</strong> lot</span>' +
+          '<span class="ps-card-stat"><strong>' + formatSqFt(p.bldgSqFt) + '</strong> bldg</span>' +
+          '<span class="ps-card-stat"><strong>' + p.zoningLabel + '</strong></span>' +
+        '</div>' +
+        '<div class="ps-card-badges">' + allBadges(p) + '</div>' +
+      '</div>';
+    }
+
+    /* ── RENDER MAP MARKERS ── */
+    function renderMarkers() {
+      STATE.markerLayer.clearLayers();
+      STATE.markers = {};
+      STATE.filteredProperties.forEach(function(p) {
+        var icon = createMarkerIcon(p.epaStatus, p.fleetSuitable);
+        var marker = L.marker([p.lat, p.lng], { icon: icon });
+        var popup = '<div class="ps-popup-title">' + p.address + '</div>' +
+          '<div class="ps-popup-sub">' + p.city + ', ' + p.county + ' Co. — ' + formatPrice(p.price) + '</div>' +
+          '<div class="ps-popup-badges">' + allBadges(p) + '</div>' +
+          '<button class="ps-popup-btn" onclick="document.dispatchEvent(new CustomEvent(\'ps-select\',{detail:\'' + p.id + '\'}))">View Details</button>';
+        marker.bindPopup(popup, { maxWidth: 280 });
+        marker.on('click', function() {
+          document.querySelectorAll('.ps-card').forEach(function(c) { c.classList.remove('active'); });
+          var card = document.querySelector('.ps-card[data-id="' + p.id + '"]');
+          if (card) { card.classList.add('active'); card.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }
+        });
+        marker.addTo(STATE.markerLayer);
+        STATE.markers[p.id] = marker;
+      });
+    }
+
+    /* ── RENDER RESULTS LIST ── */
+    function renderResults() {
+      var list = document.getElementById('ps-results-list');
+      var count = document.getElementById('ps-results-count');
+      count.textContent = STATE.filteredProperties.length + ' of ' + PROPERTIES.length + ' properties';
+      if (STATE.filteredProperties.length === 0) {
+        list.innerHTML = '<div class="ps-empty-state"><div class="icon">&#128269;</div><p>No properties match your current filters.<br>Try adjusting your search criteria.</p></div>';
+        return;
+      }
+      list.innerHTML = STATE.filteredProperties.map(renderCard).join('');
+    }
+
+    /* ── RENDER EVERYTHING ── */
+    function renderAll() {
+      renderResults();
+      renderMarkers();
+    }
+
+    /* ── SEARCH & FILTER ── */
+    function getCheckedValues(name) {
+      return Array.from(document.querySelectorAll('input[name="' + name + '"]:checked')).map(function(cb) { return cb.value; });
+    }
+    function numVal(id) {
+      var v = document.getElementById(id).value;
+      return v === '' ? null : Number(v);
+    }
+
+    function applyFilters() {
+      var search = document.getElementById('ps-search-input').value.toLowerCase().trim();
+      var ptypes = getCheckedValues('ptype');
+      var zonings = getCheckedValues('zoning');
+      var epas = getCheckedValues('epa');
+      var gfs = getCheckedValues('gf');
+      var counties = getCheckedValues('county');
+      var vacancies = getCheckedValues('vacancy');
+      var deedOnly = document.getElementById('filter-deed-only').checked;
+      var titleAvail = document.getElementById('filter-title-avail').checked;
+      var lotMin = numVal('lot-min');
+      var lotMax = numVal('lot-max');
+      var priceMin = numVal('price-min');
+      var priceMax = numVal('price-max');
+      var bldgMin = numVal('bldg-min');
+      var bldgMax = numVal('bldg-max');
+
+      STATE.filteredProperties = PROPERTIES.filter(function(p) {
+        /* Text search */
+        if (search) {
+          var hay = (p.address + ' ' + p.city + ' ' + p.county + ' ' + p.zip + ' ' + p.description + ' ' + p.currentUse + ' ' + p.zoningLabel + ' ' + p.propertyType).toLowerCase();
+          if (hay.indexOf(search) === -1) return false;
+        }
+        /* Checkbox filters */
+        if (ptypes.length && ptypes.indexOf(p.propertyType) === -1) return false;
+        if (zonings.length && zonings.indexOf(p.zoning) === -1) return false;
+        if (epas.length && epas.indexOf(p.epaStatus) === -1) return false;
+        if (gfs.length && gfs.indexOf(getGfFilterCategory(p)) === -1) return false;
+        if (counties.length && counties.indexOf(p.county) === -1) return false;
+        if (vacancies.length) {
+          var vac = p.isVacant ? 'vacant' : 'occupied';
+          if (vacancies.indexOf(vac) === -1) return false;
+        }
+        /* Special flags */
+        if (deedOnly && p.titleFlags.length === 0 && p.deedRestrictions.length === 0) return false;
+        if (titleAvail && !p.hasTitleData) return false;
+        /* Ranges */
+        if (lotMin !== null && p.lotSqFt < lotMin) return false;
+        if (lotMax !== null && p.lotSqFt > lotMax) return false;
+        if (priceMin !== null && p.price < priceMin) return false;
+        if (priceMax !== null && p.price > priceMax) return false;
+        if (bldgMin !== null && p.bldgSqFt < bldgMin) return false;
+        if (bldgMax !== null && p.bldgSqFt > bldgMax) return false;
+        return true;
+      });
+
+      /* Sort */
+      var sort = document.getElementById('ps-sort').value;
+      STATE.filteredProperties.sort(function(a, b) {
+        if (sort === 'price-asc') return a.price - b.price;
+        if (sort === 'price-desc') return b.price - a.price;
+        if (sort === 'lot-desc') return b.lotSqFt - a.lotSqFt;
+        if (sort === 'risk-desc') {
+          var riskOrder = { critical:4, high:3, moderate:2, low:1, none:0 };
+          return (riskOrder[getGrandfatherRisk(b)] || 0) - (riskOrder[getGrandfatherRisk(a)] || 0);
+        }
+        return 0;
+      });
+
+      updateFilterCount();
+      renderAll();
+    }
+
+    function updateFilterCount() {
+      var total = PROPERTIES.length;
+      var filtered = STATE.filteredProperties.length;
+      var badge = document.getElementById('ps-filter-count');
+      var diff = total - filtered;
+      if (diff > 0) {
+        badge.textContent = diff;
+        badge.style.display = 'inline';
+      } else {
+        badge.style.display = 'none';
+      }
+    }
+
+    function resetFilters() {
+      document.querySelectorAll('.ps-filter-panel input[type="checkbox"]').forEach(function(cb) {
+        if (cb.name) cb.checked = true;
+        else cb.checked = false;
+      });
+      ['lot-min','lot-max','price-min','price-max','bldg-min','bldg-max'].forEach(function(id) {
+        document.getElementById(id).value = '';
+      });
+      document.getElementById('ps-search-input').value = '';
+      applyFilters();
+    }
+
+    /* ── EPA ECHO API INTEGRATION ──
+       Queries real EPA ECHO database for facilities near a property.
+       No API key required. Returns real environmental compliance data. */
+    function fetchEpaData(lat, lng, callback) {
+      var url = CONFIG.epaEchoBase +
+        '?output=JSON&p_st=WA' +
+        '&p_lat=' + lat +
+        '&p_long=' + lng +
+        '&p_radius=' + CONFIG.epaRadiusMiles;
+
+      fetch(url)
+        .then(function(res) { return res.json(); })
+        .then(function(data) {
+          var facilities = [];
+          if (data && data.Results && data.Results.Facilities) {
+            facilities = data.Results.Facilities.map(function(f) {
+              return {
+                name: f.FacName || 'Unknown Facility',
+                address: (f.FacStreet || '') + ', ' + (f.FacCity || ''),
+                lat: parseFloat(f.FacLat) || 0,
+                lng: parseFloat(f.FacLong) || 0,
+                cwaStatus: f.CWACompStatus || 'N/A',
+                rcraStatus: f.RCRACompStatus || 'N/A',
+                caaStatus: f.CAACompStatus || 'N/A',
+                epaSystem: f.EPASystem || '',
+                sourceId: f.SourceID || ''
+              };
+            });
+          }
+          callback(null, facilities);
+        })
+        .catch(function(err) {
+          console.warn('EPA ECHO API error:', err);
+          callback(err, []);
+        });
+    }
+
+    /* ── AI SUMMARY GENERATOR ──
+       Template-based system works immediately with no API key.
+       If Anthropic API key + proxy are configured, uses Claude API instead. */
+    function generateSummary(p, epaFacilities) {
+      /* Template-based summary (always available) */
+      var lines = [];
+      var acres = acresFromSqFt(p.lotSqFt);
+      var pricePerSf = (p.price / p.lotSqFt).toFixed(2);
+
+      /* Opening */
+      lines.push('This ' + acres + '-acre parcel at ' + p.address + ' in ' + p.city + '\'s ' + p.zoning + ' (' + p.zoningLabel + ') zone is listed at ' + formatPrice(p.price) + ' ($' + pricePerSf + '/sf lot).');
+
+      /* EPA */
+      if (p.epaStatus === 'clean') {
+        lines.push('No EPA environmental flags are associated with this property.');
+        if (epaFacilities && epaFacilities.length > 0) {
+          lines.push(epaFacilities.length + ' EPA-registered facilit' + (epaFacilities.length === 1 ? 'y exists' : 'ies exist') + ' within ' + CONFIG.epaRadiusMiles + ' miles, but none indicate direct contamination risk to this parcel.');
+        }
+      } else if (p.epaStatus === 'flagged') {
+        lines.push('EPA records flag environmental concerns for this property — a Phase I Environmental Site Assessment is recommended before acquisition.');
+        if (epaFacilities && epaFacilities.length > 0) {
+          lines.push(epaFacilities.length + ' EPA-registered facilit' + (epaFacilities.length === 1 ? 'y was' : 'ies were') + ' found within ' + CONFIG.epaRadiusMiles + ' miles.');
+        }
+      } else {
+        lines.push('This is a designated brownfield site with confirmed contamination. Remediation will be required. Phase II ESA data should be reviewed carefully before proceeding.');
+      }
+
+      /* Grandfathered */
+      if (p.isGrandfathered) {
+        var risk = getGrandfatherRisk(p);
+        var vm = monthsSince(p.vacantSince);
+        lines.push('The property has documented ' + (p.currentUse || 'automotive') + ' use and holds grandfathered nonconforming status.');
+        if (p.isVacant && vm !== null) {
+          lines.push('It has been vacant for approximately ' + vm + ' months.');
+          if (risk === 'moderate') lines.push('This is approaching the review threshold — monitor closely.');
+          if (risk === 'high') lines.push('Risk is HIGH — vacancy duration is nearing the jurisdiction\'s limit for maintaining nonconforming use protections.');
+          if (risk === 'critical') lines.push('CRITICAL: vacancy exceeds typical nonconforming use windows. Grandfathered status may already be at risk of revocation.');
+        } else if (!p.isVacant) {
+          lines.push('The property is currently occupied with active automotive use — grandfathered status appears secure.');
+        }
+      }
+
+      /* Title / Deed */
+      if (p.titleFlags.length > 0 || p.deedRestrictions.length > 0) {
+        var flags = p.titleFlags.concat(p.deedRestrictions);
+        lines.push('Title review reveals ' + flags.length + ' flag' + (flags.length === 1 ? '' : 's') + ': ' + flags.join('; ') + '. Recommend title company review before closing.');
+      } else if (p.hasTitleData) {
+        lines.push('No deed restrictions or title flags found in available public records.');
+      } else {
+        lines.push('Title data is not publicly available for this parcel — a formal title search is recommended.');
+      }
+
+      /* Fleet */
+      if (p.fleetSuitable) {
+        lines.push('This property is classified as fleet-suitable for state or federal vehicle operations, with features including: ' + p.fleetFeatures.join(', ') + '.');
+      }
+
+      return lines.join(' ');
+    }
+
+    /* Anthropic API call (requires proxy + key) */
+    function generateAiSummary(p, epaFacilities, callback) {
+      if (!STATE.settings.apiKey || !STATE.settings.proxyUrl) {
+        callback(generateSummary(p, epaFacilities));
+        return;
+      }
+      var prompt = 'You are an automotive real estate analyst for Washington State. Given the following property data, write a concise 3-5 sentence plain-language intelligence summary for a client evaluating this property for automotive use. Cover EPA status, grandfathered zoning risk, title issues, and fleet suitability where relevant.\n\nProperty: ' + JSON.stringify(p) + '\nNearby EPA facilities: ' + (epaFacilities ? epaFacilities.length : 0);
+
+      fetch(STATE.settings.proxyUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': STATE.settings.apiKey,
+          'anthropic-version': '2023-06-01'
+        },
+        body: JSON.stringify({
+          model: CONFIG.anthropicModel,
+          max_tokens: 400,
+          messages: [{ role: 'user', content: prompt }]
+        })
+      })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (data.content && data.content[0]) {
+          callback(data.content[0].text);
+        } else {
+          callback(generateSummary(p, epaFacilities));
+        }
+      })
+      .catch(function() {
+        callback(generateSummary(p, epaFacilities));
+      });
+    }
+
+    /* ── DETAIL PANEL ── */
+    function openDetail(id) {
+      var p = PROPERTIES.find(function(x) { return x.id === id; });
+      if (!p) return;
+      STATE.selectedProperty = p;
+      var body = document.getElementById('ps-detail-body');
+      var risk = getGrandfatherRisk(p);
+      var vm = monthsSince(p.vacantSince);
+      var portalUrl = COUNTY_PORTALS[p.county] || '#';
+
+      /* Build HTML */
+      var html = '';
+      html += '<h2>' + p.address + '</h2>';
+      html += '<div class="ps-detail-addr">' + p.city + ', ' + p.county + ' County, WA ' + p.zip + '</div>';
+      html += '<div class="ps-detail-price">$' + p.price.toLocaleString() + '</div>';
+
+      /* Stats row */
+      html += '<div class="ps-detail-stats">';
+      html += '<div class="ps-detail-stat"><div class="ps-detail-stat-val">' + acresFromSqFt(p.lotSqFt) + '</div><div class="ps-detail-stat-label">Acres</div></div>';
+      html += '<div class="ps-detail-stat"><div class="ps-detail-stat-val">' + formatSqFt(p.bldgSqFt) + '</div><div class="ps-detail-stat-label">Building</div></div>';
+      html += '<div class="ps-detail-stat"><div class="ps-detail-stat-val">' + p.zoning + '</div><div class="ps-detail-stat-label">Zoning</div></div>';
+      html += '</div>';
+
+      /* Badges */
+      html += '<div style="margin-bottom:24px;">' + allBadges(p) + '</div>';
+
+      /* AI Summary section */
+      html += '<div class="ps-section" id="ps-summary-section">';
+      html += '<div class="ps-section-title">Property Intelligence Summary</div>';
+      html += '<div class="ps-summary-box" id="ps-summary-text"><em style="color:var(--dim);">Generating analysis...</em></div>';
+      html += '</div>';
+
+      /* Property Details */
+      html += '<div class="ps-section">';
+      html += '<div class="ps-section-title">Property Details</div>';
+      html += '<div class="ps-info-row"><span class="ps-info-label">Property Type</span><span class="ps-info-value">' + p.propertyType.replace(/-/g,' ').replace(/\b\w/g, function(c){return c.toUpperCase();}) + '</span></div>';
+      html += '<div class="ps-info-row"><span class="ps-info-label">Zoning</span><span class="ps-info-value">' + p.zoning + ' — ' + p.zoningLabel + '</span></div>';
+      html += '<div class="ps-info-row"><span class="ps-info-label">Lot Size</span><span class="ps-info-value">' + p.lotSqFt.toLocaleString() + ' sf (' + acresFromSqFt(p.lotSqFt) + ' ac)</span></div>';
+      html += '<div class="ps-info-row"><span class="ps-info-label">Building</span><span class="ps-info-value">' + (p.bldgSqFt ? p.bldgSqFt.toLocaleString() + ' sf' : 'Vacant land') + '</span></div>';
+      if (p.yearBuilt) html += '<div class="ps-info-row"><span class="ps-info-label">Year Built</span><span class="ps-info-value">' + p.yearBuilt + '</span></div>';
+      html += '<div class="ps-info-row"><span class="ps-info-label">Current Use</span><span class="ps-info-value">' + p.currentUse + '</span></div>';
+      html += '<div class="ps-info-row"><span class="ps-info-label">Vacancy</span><span class="ps-info-value">' + (p.isVacant ? 'Vacant' + (vm !== null ? ' (' + vm + ' months)' : '') : 'Occupied / Active') + '</span></div>';
+      html += '<div class="ps-info-row"><span class="ps-info-label">Price / SF (Lot)</span><span class="ps-info-value">$' + (p.price / p.lotSqFt).toFixed(2) + '</span></div>';
+      html += '<div class="ps-info-row"><span class="ps-info-label">Source</span><span class="ps-info-value">' + p.listingSource + '</span></div>';
+      html += '<div class="ps-info-row"><span class="ps-info-label">County Portal</span><span class="ps-info-value"><a href="' + portalUrl + '" target="_blank" rel="noopener" style="color:var(--red);">View Records &#8599;</a></span></div>';
+      html += '<div style="margin-top:10px; font-size:0.82rem; color:var(--steel); line-height:1.6;">' + p.description + '</div>';
+      html += '</div>';
+
+      /* EPA & Environmental */
+      html += '<div class="ps-section">';
+      html += '<div class="ps-section-title">EPA &amp; Environmental</div>';
+      html += '<div style="margin-bottom:12px;">' + epaBadge(p.epaStatus) + '</div>';
+      html += '<div id="ps-epa-results"><div class="ps-epa-loading">&#8987; Querying EPA ECHO database...</div></div>';
+      html += '</div>';
+
+      /* Grandfathered Status */
+      if (p.isGrandfathered) {
+        html += '<div class="ps-section">';
+        html += '<div class="ps-section-title">Grandfathered Status</div>';
+        html += '<div class="ps-info-row"><span class="ps-info-label">Status</span><span class="ps-info-value">' + (risk === 'low' ? '&#9989; Protected' : risk === 'moderate' ? '&#9888; At Risk' : risk === 'high' ? '&#128308; High Risk' : '&#128680; Critical') + '</span></div>';
+        html += '<div class="ps-info-row"><span class="ps-info-label">Risk Level</span><span class="ps-info-value" style="text-transform:uppercase;">' + risk + '</span></div>';
+        html += '<div class="ps-risk-meter ps-risk-' + risk + '"><div class="ps-risk-fill"></div></div>';
+        if (p.grandfatherRiskFactors.length > 0) {
+          html += '<ul class="ps-risk-factors">';
+          p.grandfatherRiskFactors.forEach(function(f) { html += '<li>' + f + '</li>'; });
+          html += '</ul>';
+        }
+        html += '</div>';
+      }
+
+      /* Title & Deed */
+      html += '<div class="ps-section">';
+      html += '<div class="ps-section-title">Title &amp; Deed Restrictions</div>';
+      if (!p.hasTitleData) {
+        html += '<p style="font-size:0.84rem; color:var(--dim);">Title data is not publicly available for this parcel. A formal title search through a title company is recommended.</p>';
+      } else if (p.titleFlags.length === 0 && p.deedRestrictions.length === 0) {
+        html += '<p style="font-size:0.84rem; color:var(--steel);">&#9989; No deed restrictions or title flags found in public records.</p>';
+      } else {
+        if (p.titleFlags.length > 0) {
+          html += '<h4 style="font-family:\'Barlow Condensed\',sans-serif; font-size:0.7rem; letter-spacing:0.12em; text-transform:uppercase; color:var(--steel); margin:0 0 8px;">Title Flags</h4>';
+          p.titleFlags.forEach(function(f) { html += '<div class="ps-epa-item"><div class="ps-epa-item-name">&#128203; ' + f + '</div></div>'; });
+        }
+        if (p.deedRestrictions.length > 0) {
+          html += '<h4 style="font-family:\'Barlow Condensed\',sans-serif; font-size:0.7rem; letter-spacing:0.12em; text-transform:uppercase; color:var(--steel); margin:12px 0 8px;">Deed Restrictions</h4>';
+          p.deedRestrictions.forEach(function(r) { html += '<div class="ps-epa-item"><div class="ps-epa-item-name">&#128274; ' + r + '</div></div>'; });
+        }
+      }
+      html += '</div>';
+
+      /* Fleet Suitability */
+      if (p.fleetSuitable) {
+        html += '<div class="ps-section">';
+        html += '<div class="ps-section-title">Fleet &amp; Government Suitability</div>';
+        html += '<p style="font-size:0.84rem; color:var(--steel); margin-bottom:10px;">This property is classified as suitable for state or federal fleet vehicle operations.</p>';
+        html += '<div style="display:flex; flex-wrap:wrap; gap:6px;">';
+        p.fleetFeatures.forEach(function(f) { html += '<span class="ps-badge ps-badge-fleet">' + f + '</span>'; });
+        html += '</div></div>';
+      }
+
+      body.innerHTML = html;
+      document.getElementById('ps-detail').classList.add('open');
+
+      /* Fly map to property */
+      STATE.map.flyTo([p.lat, p.lng], 14, { duration: 0.8 });
+      if (STATE.markers[p.id]) STATE.markers[p.id].openPopup();
+
+      /* Fetch real EPA data */
+      fetchEpaData(p.lat, p.lng, function(err, facilities) {
+        var el = document.getElementById('ps-epa-results');
+        if (!el) return;
+        if (err) {
+          el.innerHTML = '<p style="font-size:0.82rem; color:var(--dim);">Could not reach EPA ECHO database. Check connection and try again.</p>';
+        } else if (facilities.length === 0) {
+          el.innerHTML = '<p style="font-size:0.82rem; color:var(--steel);">No EPA-registered facilities found within ' + CONFIG.epaRadiusMiles + ' miles.</p>';
+        } else {
+          var h = '<p style="font-size:0.82rem; color:var(--steel); margin-bottom:10px;"><strong>' + facilities.length + '</strong> EPA-registered facilit' + (facilities.length === 1 ? 'y' : 'ies') + ' within ' + CONFIG.epaRadiusMiles + ' miles:</p>';
+          facilities.slice(0, 10).forEach(function(f) {
+            h += '<div class="ps-epa-item">';
+            h += '<div class="ps-epa-item-name">' + f.name + '</div>';
+            h += '<div class="ps-epa-item-detail">' + f.address + '</div>';
+            h += '<div class="ps-epa-item-detail">CWA: ' + f.cwaStatus + ' | RCRA: ' + f.rcraStatus + ' | CAA: ' + f.caaStatus + '</div>';
+            h += '</div>';
+          });
+          if (facilities.length > 10) h += '<p style="font-size:0.75rem; color:var(--dim); margin-top:8px;">+ ' + (facilities.length - 10) + ' more facilities. Visit EPA ECHO for full list.</p>';
+          el.innerHTML = h;
+        }
+
+        /* Generate summary after EPA data loads */
+        generateAiSummary(p, facilities, function(text) {
+          var sEl = document.getElementById('ps-summary-text');
+          if (sEl) sEl.innerHTML = text;
+        });
+      });
+    }
+
+    function closeDetail() {
+      document.getElementById('ps-detail').classList.remove('open');
+      STATE.selectedProperty = null;
+      STATE.map.flyTo(CONFIG.mapCenter, CONFIG.mapZoom, { duration: 0.5 });
+    }
+
+    /* ── PDF EXPORT ──
+       Uses jsPDF to generate a property intelligence report. */
+    function exportPdf() {
+      var p = STATE.selectedProperty;
+      if (!p) return;
+      var jsPDF = window.jspdf.jsPDF;
+      var doc = new jsPDF({ unit: 'mm', format: 'a4' });
+      var y = 20;
+      var lm = 20; /* left margin */
+      var pw = 170; /* page width usable */
+
+      /* Header */
+      doc.setFillColor(10, 15, 30);
+      doc.rect(0, 0, 210, 40, 'F');
+      doc.setTextColor(200, 16, 46);
+      doc.setFontSize(22);
+      doc.setFont('helvetica', 'bold');
+      doc.text('ARES', lm, 18);
+      doc.setFontSize(9);
+      doc.setTextColor(176, 184, 193);
+      doc.text('Automotive Real Estate Solutions — Property Intelligence Report', lm, 26);
+      doc.setTextColor(107, 114, 128);
+      doc.setFontSize(7);
+      doc.text('Generated: ' + new Date().toLocaleDateString() + ' | ID: ' + p.id, lm, 34);
+
+      y = 50;
+      doc.setTextColor(30, 30, 30);
+
+      /* Property heading */
+      doc.setFontSize(16);
+      doc.setFont('helvetica', 'bold');
+      doc.text(p.address, lm, y); y += 7;
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      doc.text(p.city + ', ' + p.county + ' County, WA ' + p.zip, lm, y); y += 10;
+
+      doc.setFontSize(14);
+      doc.setTextColor(200, 16, 46);
+      doc.setFont('helvetica', 'bold');
+      doc.text('$' + p.price.toLocaleString(), lm, y); y += 12;
+
+      /* Details table */
+      doc.setTextColor(30, 30, 30);
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'bold');
+      doc.text('PROPERTY DETAILS', lm, y); y += 6;
+      doc.setFont('helvetica', 'normal');
+      var details = [
+        ['Lot Size', p.lotSqFt.toLocaleString() + ' sf (' + acresFromSqFt(p.lotSqFt) + ' acres)'],
+        ['Building', p.bldgSqFt ? p.bldgSqFt.toLocaleString() + ' sf' : 'Vacant land'],
+        ['Zoning', p.zoning + ' — ' + p.zoningLabel],
+        ['Property Type', p.propertyType.replace(/-/g, ' ')],
+        ['Current Use', p.currentUse],
+        ['Year Built', p.yearBuilt ? String(p.yearBuilt) : 'N/A'],
+        ['Vacancy', p.isVacant ? 'Vacant' + (monthsSince(p.vacantSince) !== null ? ' (' + monthsSince(p.vacantSince) + ' months)' : '') : 'Occupied'],
+        ['Price/SF', '$' + (p.price / p.lotSqFt).toFixed(2)]
+      ];
+      doc.setFontSize(8);
+      details.forEach(function(row) {
+        doc.setFont('helvetica', 'bold');
+        doc.text(row[0] + ':', lm, y);
+        doc.setFont('helvetica', 'normal');
+        doc.text(row[1], lm + 40, y);
+        y += 5;
+      });
+      y += 6;
+
+      /* EPA */
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'bold');
+      doc.text('EPA & ENVIRONMENTAL', lm, y); y += 6;
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8);
+      doc.text('Status: ' + p.epaStatus.toUpperCase(), lm, y); y += 8;
+
+      /* Grandfathered */
+      if (p.isGrandfathered) {
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'bold');
+        doc.text('GRANDFATHERED STATUS', lm, y); y += 6;
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(8);
+        doc.text('Risk Level: ' + getGrandfatherRisk(p).toUpperCase(), lm, y); y += 5;
+        p.grandfatherRiskFactors.forEach(function(f) {
+          var lines = doc.splitTextToSize('- ' + f, pw);
+          doc.text(lines, lm, y);
+          y += lines.length * 4;
+        });
+        y += 4;
+      }
+
+      /* Title */
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'bold');
+      doc.text('TITLE & DEED RESTRICTIONS', lm, y); y += 6;
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8);
+      if (p.titleFlags.length === 0 && p.deedRestrictions.length === 0) {
+        doc.text('No title flags or deed restrictions found.', lm, y); y += 5;
+      } else {
+        p.titleFlags.concat(p.deedRestrictions).forEach(function(f) {
+          var lines = doc.splitTextToSize('- ' + f, pw);
+          doc.text(lines, lm, y);
+          y += lines.length * 4;
+        });
+      }
+      y += 6;
+
+      /* Summary */
+      var summaryEl = document.getElementById('ps-summary-text');
+      if (summaryEl && summaryEl.textContent) {
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'bold');
+        doc.text('INTELLIGENCE SUMMARY', lm, y); y += 6;
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(8);
+        var sLines = doc.splitTextToSize(summaryEl.textContent, pw);
+        /* Check if we need a new page */
+        if (y + (sLines.length * 4) > 280) { doc.addPage(); y = 20; }
+        doc.text(sLines, lm, y);
+        y += sLines.length * 4;
+      }
+
+      /* Footer */
+      y = 282;
+      doc.setDrawColor(200, 16, 46);
+      doc.line(lm, y, lm + pw, y);
+      doc.setFontSize(7);
+      doc.setTextColor(150, 150, 150);
+      doc.text('ARES — Automotive Real Estate Solutions | South Sound, Washington State | aresautomotivere.com', lm, y + 5);
+      doc.text('This report is for informational purposes only. Verify all data independently before making acquisition decisions.', lm, y + 9);
+
+      doc.save('ARES_Property_' + p.id + '.pdf');
+    }
+
+    /* ── EVENT HANDLERS ── */
+    function initEvents() {
+      /* Search input (debounced) */
+      var searchTimer;
+      document.getElementById('ps-search-input').addEventListener('input', function() {
+        clearTimeout(searchTimer);
+        searchTimer = setTimeout(applyFilters, 300);
+      });
+
+      /* Filter panel toggle */
+      document.getElementById('ps-filter-toggle').addEventListener('click', function() {
+        var panel = document.getElementById('ps-filter-panel');
+        panel.classList.toggle('open');
+        this.classList.toggle('active');
+      });
+
+      /* Apply / Reset filters */
+      document.getElementById('ps-filter-apply').addEventListener('click', function() {
+        applyFilters();
+        document.getElementById('ps-filter-panel').classList.remove('open');
+        document.getElementById('ps-filter-toggle').classList.remove('active');
+      });
+      document.getElementById('ps-filter-reset').addEventListener('click', resetFilters);
+
+      /* Sort */
+      document.getElementById('ps-sort').addEventListener('change', applyFilters);
+
+      /* Property selection (from cards and popups) */
+      document.addEventListener('ps-select', function(e) { openDetail(e.detail); });
+
+      /* Detail panel close */
+      document.getElementById('ps-detail-close').addEventListener('click', closeDetail);
+
+      /* PDF export */
+      document.getElementById('ps-detail-export').addEventListener('click', exportPdf);
+
+      /* Settings modal */
+      document.getElementById('ps-settings-toggle').addEventListener('click', function() {
+        document.getElementById('ps-settings-modal').classList.add('open');
+        document.getElementById('setting-api-key').value = STATE.settings.apiKey || '';
+        document.getElementById('setting-proxy-url').value = STATE.settings.proxyUrl || '';
+      });
+      document.getElementById('ps-settings-close').addEventListener('click', function() {
+        document.getElementById('ps-settings-modal').classList.remove('open');
+      });
+      document.getElementById('ps-settings-save').addEventListener('click', function() {
+        STATE.settings.apiKey = document.getElementById('setting-api-key').value.trim();
+        STATE.settings.proxyUrl = document.getElementById('setting-proxy-url').value.trim();
+        localStorage.setItem('ares_ps_settings', JSON.stringify(STATE.settings));
+        document.getElementById('ps-settings-modal').classList.remove('open');
+      });
+
+      /* Close filter panel when clicking outside */
+      document.addEventListener('click', function(e) {
+        var panel = document.getElementById('ps-filter-panel');
+        var toggle = document.getElementById('ps-filter-toggle');
+        if (panel.classList.contains('open') && !panel.contains(e.target) && !toggle.contains(e.target)) {
+          panel.classList.remove('open');
+          toggle.classList.remove('active');
+        }
+      });
+
+      /* Keyboard shortcut: Escape closes detail panel */
+      document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+          closeDetail();
+          document.getElementById('ps-filter-panel').classList.remove('open');
+          document.getElementById('ps-settings-modal').classList.remove('open');
+        }
+      });
+    }
+
+    /* ── INITIALIZATION ── */
+    function init() {
+      initMap();
+      initEvents();
+      applyFilters(); /* renders everything */
+    }
+
+    /* Boot the app when DOM is ready */
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', init);
+    } else {
+      init();
+    }
+  })();
+
+  </script>
+
+</body>
+</html>
