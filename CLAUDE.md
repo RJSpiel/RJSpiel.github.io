@@ -1,0 +1,1 @@
+Implement checksums/verification protocol before ever saying "done" or completing a response.
