@@ -1213,34 +1213,30 @@
       }
     ];
 
-    /* County assessor portal — builds a direct address-search URL for each county */
+    /* County assessor portal — verified official search URLs for each county (2026) */
     function getPortalUrl(p) {
-      var addr = encodeURIComponent(p.address);
-      var city = encodeURIComponent(p.city);
       switch (p.county) {
         case 'Thurston':
           /* Thurston County parcel search — accepts address or parcel number */
           return 'https://map.co.thurston.wa.us/parcelinfo/';
         case 'Pierce':
-          /* Pierce County Assessor-Treasurer parcel search — pre-fills street + city */
-          return 'https://epip.co.pierce.wa.us/cfapps/assessor/parcelSearch/index.cfm' +
-                 '?task=parcelSearch&type=address&addr=' + addr + '&city=' + city;
+          /* Pierce County Assessor-Treasurer Information Portal (ATIP) — replaced legacy epip portal */
+          return 'https://atip.piercecountywa.gov/app/v2/parcelSearch/search';
         case 'King':
-          /* King County eReal Property address viewer — pre-fills full address */
-          return 'https://gismaps.kingcounty.gov/addressviewer/?address=' +
-                 encodeURIComponent(p.address + ' ' + p.city + ' WA');
+          /* King County Department of Assessments — eReal Property search by address or parcel */
+          return 'https://blue.kingcounty.com/Assessor/eRealProperty/default.aspx';
         case 'Snohomish':
-          /* Snohomish County Assessor property search */
-          return 'https://assessor.snohomishcountywa.gov/search?q=' + addr + '+' + city;
+          /* Snohomish County property tax and assessment search */
+          return 'https://www.snoco.org/proptax/';
         case 'Clark':
-          /* Clark County Assessor property information search */
-          return 'https://clark.wa.gov/assessor/property-information-search';
+          /* Clark County GIS Property Information Center — search by address or tax account */
+          return 'https://gis.clark.wa.gov/gishome/property/';
         case 'Kitsap':
-          /* Kitsap County property search — pre-fills address */
-          return 'https://psearch.kitsapgov.com/assessor/query/?terms=' + addr + '+' + city;
+          /* Kitsap County parcel details search */
+          return 'https://psearch.kitsapgov.com/pdetails/default.aspx';
         case 'Whatcom':
-          /* Whatcom County property access — address search mode */
-          return 'https://property.whatcomcounty.us/propertyaccess/Property.aspx?mode=1';
+          /* Whatcom County Assessor & Treasurer property search */
+          return 'https://property.whatcomcounty.us/propertyaccess/?cid=0';
         default:
           return '#';
       }
