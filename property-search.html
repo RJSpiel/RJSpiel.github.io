@@ -1219,8 +1219,8 @@
       var city = encodeURIComponent(p.city);
       switch (p.county) {
         case 'Thurston':
-          /* Thurston County iasWorld property search — address entry form */
-          return 'https://tcproperty.co.thurston.wa.us/search/commonsearch.aspx?mode=address';
+          /* Thurston County parcel search — accepts address or parcel number */
+          return 'https://map.co.thurston.wa.us/parcelinfo/';
         case 'Pierce':
           /* Pierce County Assessor-Treasurer parcel search — pre-fills street + city */
           return 'https://epip.co.pierce.wa.us/cfapps/assessor/parcelSearch/index.cfm' +
