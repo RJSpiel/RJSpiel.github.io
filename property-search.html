@@ -1213,16 +1213,38 @@
       }
     ];
 
-    /* County assessor portal reference links */
-    const COUNTY_PORTALS = {
-      'Thurston': 'https://tcproperty.co.thurston.wa.us',
-      'Pierce':   'https://epip.co.pierce.wa.us',
-      'King':     'https://blue.kingcounty.com/Assessor/eRealProperty',
-      'Snohomish':'https://snohomishcountywa.gov/assessor',
-      'Clark':    'https://gis.clark.wa.gov',
-      'Kitsap':   'https://psearch.kitsapgov.com',
-      'Whatcom':  'https://property.whatcomcounty.us'
-    };
+    /* County assessor portal — builds a direct address-search URL for each county */
+    function getPortalUrl(p) {
+      var addr = encodeURIComponent(p.address);
+      var city = encodeURIComponent(p.city);
+      switch (p.county) {
+        case 'Thurston':
+          /* Thurston County iasWorld property search — address entry form */
+          return 'https://tcproperty.co.thurston.wa.us/search/commonsearch.aspx?mode=address';
+        case 'Pierce':
+          /* Pierce County Assessor-Treasurer parcel search — pre-fills street + city */
+          return 'https://epip.co.pierce.wa.us/cfapps/assessor/parcelSearch/index.cfm' +
+                 '?task=parcelSearch&type=address&addr=' + addr + '&city=' + city;
+        case 'King':
+          /* King County eReal Property address viewer — pre-fills full address */
+          return 'https://gismaps.kingcounty.gov/addressviewer/?address=' +
+                 encodeURIComponent(p.address + ' ' + p.city + ' WA');
+        case 'Snohomish':
+          /* Snohomish County Assessor property search */
+          return 'https://assessor.snohomishcountywa.gov/search?q=' + addr + '+' + city;
+        case 'Clark':
+          /* Clark County Assessor property information search */
+          return 'https://clark.wa.gov/assessor/property-information-search';
+        case 'Kitsap':
+          /* Kitsap County property search — pre-fills address */
+          return 'https://psearch.kitsapgov.com/assessor/query/?terms=' + addr + '+' + city;
+        case 'Whatcom':
+          /* Whatcom County property access — address search mode */
+          return 'https://property.whatcomcounty.us/propertyaccess/Property.aspx?mode=1';
+        default:
+          return '#';
+      }
+    }
 
     /* ── APPLICATION STATE ── */
     const STATE = {
@@ -1640,7 +1662,7 @@
       var body = document.getElementById('ps-detail-body');
       var risk = getGrandfatherRisk(p);
       var vm = monthsSince(p.vacantSince);
-      var portalUrl = COUNTY_PORTALS[p.county] || '#';
+      var portalUrl = getPortalUrl(p);
 
       /* Build HTML */
       var html = '';
