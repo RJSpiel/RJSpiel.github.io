@@ -1310,6 +1310,18 @@
       };
       return map[status] || '';
     }
+    function epaAssessmentHtml(p) {
+      var style = 'font-size:0.82rem; line-height:1.65; color:var(--steel); margin-bottom:6px;';
+      if (p.epaStatus === 'clean') {
+        return '<p style="' + style + '">No contamination findings on record for this parcel. Washington State and federal environmental databases return no Phase I or Phase II ESA flags for this address. No underground storage tank (UST) removal orders or soil remediation records identified.</p>';
+      } else if (p.epaStatus === 'flagged') {
+        return '<p style="' + style + '">Environmental concern flagged for this parcel. One or more database entries indicate potential contamination risk — possibly linked to prior industrial use, an underground storage tank (UST), or hydraulic fluid leaching from previous automotive operations.</p>' +
+               '<p style="' + style + ' color:var(--red);">A Phase I Environmental Site Assessment is required before acquisition. Depending on findings, a Phase II ESA with soil sampling may be necessary.</p>';
+      } else {
+        return '<p style="' + style + '">Confirmed contamination on record. This site is designated a brownfield — contamination has been identified through prior environmental survey.</p>' +
+               '<p style="' + style + ' color:var(--red);">Cleanup and remediation will be required before automotive use can proceed. Phase II ESA data and any existing Voluntary Cleanup Program (VCP) records should be reviewed carefully before making an offer.</p>';
+      }
+    }
     function gfBadge(p) {
       if (!p.isGrandfathered) return '';
       const risk = getGrandfatherRisk(p);
@@ -1540,17 +1552,17 @@
 
       /* EPA */
       if (p.epaStatus === 'clean') {
-        lines.push('No EPA environmental flags are associated with this property.');
+        lines.push('No contamination findings on record for this parcel. Environmental survey databases return no Phase I or Phase II ESA flags for this address, and no UST removal orders or soil remediation records were identified.');
         if (epaFacilities && epaFacilities.length > 0) {
-          lines.push(epaFacilities.length + ' EPA-registered facilit' + (epaFacilities.length === 1 ? 'y exists' : 'ies exist') + ' within ' + CONFIG.epaRadiusMiles + ' miles, but none indicate direct contamination risk to this parcel.');
+          lines.push(epaFacilities.length + ' EPA-tracked site' + (epaFacilities.length === 1 ? ' exists' : 's exist') + ' within ' + CONFIG.epaRadiusMiles + ' miles, but none indicate direct contamination risk to this parcel.');
         }
       } else if (p.epaStatus === 'flagged') {
-        lines.push('EPA records flag environmental concerns for this property — a Phase I Environmental Site Assessment is recommended before acquisition.');
+        lines.push('Environmental survey records flag concerns for this parcel — potential contamination risk from prior industrial use, underground storage tanks, or hydraulic fluid leaching. A Phase I ESA is required before acquisition.');
         if (epaFacilities && epaFacilities.length > 0) {
-          lines.push(epaFacilities.length + ' EPA-registered facilit' + (epaFacilities.length === 1 ? 'y was' : 'ies were') + ' found within ' + CONFIG.epaRadiusMiles + ' miles.');
+          lines.push(epaFacilities.length + ' EPA-tracked site' + (epaFacilities.length === 1 ? ' was' : 's were') + ' found within ' + CONFIG.epaRadiusMiles + ' miles.');
         }
       } else {
-        lines.push('This is a designated brownfield site with confirmed contamination. Remediation will be required. Phase II ESA data should be reviewed carefully before proceeding.');
+        lines.push('This is a designated brownfield with confirmed contamination identified through prior environmental survey. Remediation is required. Phase II ESA data and any VCP records should be reviewed carefully before proceeding.');
       }
 
       /* Grandfathered */
@@ -1670,9 +1682,11 @@
 
       /* EPA & Environmental */
       html += '<div class="ps-section">';
-      html += '<div class="ps-section-title">EPA &amp; Environmental</div>';
+      html += '<div class="ps-section-title">Environmental Survey History</div>';
       html += '<div style="margin-bottom:12px;">' + epaBadge(p.epaStatus) + '</div>';
-      html += '<div id="ps-epa-results"><div class="ps-epa-loading">&#8987; Querying EPA ECHO database...</div></div>';
+      html += epaAssessmentHtml(p);
+      html += '<div style="margin-top:16px; padding-top:12px; border-top:1px solid var(--border);"><div style="font-size:0.75rem; text-transform:uppercase; letter-spacing:0.06em; color:var(--dim); margin-bottom:8px;">Nearby Environmental Records</div>';
+      html += '<div id="ps-epa-results"><div class="ps-epa-loading">&#8987; Querying EPA ECHO database&hellip;</div></div></div>';
       html += '</div>';
 
       /* Grandfathered Status */
@@ -1733,9 +1747,9 @@
         if (err) {
           el.innerHTML = '<p style="font-size:0.82rem; color:var(--dim);">Could not reach EPA ECHO database. Check connection and try again.</p>';
         } else if (facilities.length === 0) {
-          el.innerHTML = '<p style="font-size:0.82rem; color:var(--steel);">No EPA-registered facilities found within ' + CONFIG.epaRadiusMiles + ' miles.</p>';
+          el.innerHTML = '<p style="font-size:0.82rem; color:var(--steel);">No EPA-tracked facilities found within ' + CONFIG.epaRadiusMiles + ' miles radius.</p>';
         } else {
-          var h = '<p style="font-size:0.82rem; color:var(--steel); margin-bottom:10px;"><strong>' + facilities.length + '</strong> EPA-registered facilit' + (facilities.length === 1 ? 'y' : 'ies') + ' within ' + CONFIG.epaRadiusMiles + ' miles:</p>';
+          var h = '<p style="font-size:0.82rem; color:var(--steel); margin-bottom:10px;"><strong>' + facilities.length + '</strong> EPA-tracked site' + (facilities.length === 1 ? '' : 's') + ' within ' + CONFIG.epaRadiusMiles + ' miles — these are nearby facilities with EPA compliance records, not assessments of this specific parcel:</p>';
           facilities.slice(0, 10).forEach(function(f) {
             h += '<div class="ps-epa-item">';
             h += '<div class="ps-epa-item-name">' + f.name + '</div>';
@@ -1743,7 +1757,7 @@
             h += '<div class="ps-epa-item-detail">CWA: ' + f.cwaStatus + ' | RCRA: ' + f.rcraStatus + ' | CAA: ' + f.caaStatus + '</div>';
             h += '</div>';
           });
-          if (facilities.length > 10) h += '<p style="font-size:0.75rem; color:var(--dim); margin-top:8px;">+ ' + (facilities.length - 10) + ' more facilities. Visit EPA ECHO for full list.</p>';
+          if (facilities.length > 10) h += '<p style="font-size:0.75rem; color:var(--dim); margin-top:8px;">+ ' + (facilities.length - 10) + ' more records. Visit EPA ECHO for the full list.</p>';
           el.innerHTML = h;
         }
 
