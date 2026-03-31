@@ -344,11 +344,14 @@ const COUNTY_SOURCES = [
 
   {
     county: 'Clark', state: 'WA', idPrefix: 'WA',
-    // Clark County public taxlots (single-part geometry for reliable centroids).
-    // Zoning field is ZONING; automotive codes: M1, M2, CC, CG, IL, IH.
+    // Clark County public taxlots. ArcGIS LIKE filtering is unreliable here —
+    // all server-side WHERE attempts returned 0 results even for broad patterns.
+    // Solution: fetch all (WHERE=1=1, capped at maxFeatures) then filter client-side
+    // in importFromCountyGIS using rejectUsePatterns against the raw propertyuseclass value.
     url: 'https://gis.clark.wa.gov/arcgisfed/rest/services/Hosted/TaxlotsPublic_Singlepart/FeatureServer/0/query',
-    where: "propertyuseclass NOT LIKE '%Residential%' AND propertyuseclass NOT LIKE '%Agric%' AND propertyuseclass NOT LIKE '%Rural%' AND propertyuseclass NOT LIKE '%Timber%' AND propertyuseclass NOT LIKE '%Forest%'",
-    maxFeatures: 200,
+    where: '1=1',
+    maxFeatures: 400,
+    rejectUsePatterns: ['RESIDENTIAL', 'RURAL', 'AGRICULT', 'FARM', 'TIMBER', 'FOREST', 'VACANT LAND', 'OPEN SPACE'],
   },
 
   {
@@ -537,6 +540,14 @@ function importFromCountyGIS() {
         try {
           const row = parseGisFeature(feature, source);
           if (!row) return; // unparseable — skip
+
+          // Client-side use-class filter (used when server-side WHERE is unreliable, e.g. Clark WA).
+          // Skips rows whose currentUse contains any of the source's rejectUsePatterns.
+          if (source.rejectUsePatterns && source.rejectUsePatterns.length) {
+            const useUpper = (row.currentUse || '').toUpperCase();
+            const rejected = source.rejectUsePatterns.some(function(p) { return useUpper.indexOf(p) !== -1; });
+            if (rejected) { totalSkipped++; return; }
+          }
 
           // Skip if address is blank or already in sheet
           if (!row.address || row.address.length < 5) return;
