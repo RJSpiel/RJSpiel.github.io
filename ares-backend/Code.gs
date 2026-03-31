@@ -307,7 +307,7 @@ const COUNTY_SOURCES = [
     // Thurston has no ZONING column; PROP_TYPE codes: C=Commercial, I=Industrial,
     // 4=Manufacturing.  CURR_USE mirrors these values.
     url: 'https://map.co.thurston.wa.us/arcgis/rest/services/Thurston/Thurston_Parcels/FeatureServer/0/query',
-    where: "PROP_TYPE IN ('C','I','4','M','3')",
+    where: "PROP_TYPE IN ('COM','IND','MNF','COMM') OR USE_CODE LIKE '2%' OR USE_CODE LIKE '3%'",
     maxFeatures: 200,
     acresField: 'TOTAL_ACRES',
   },
@@ -317,8 +317,8 @@ const COUNTY_SOURCES = [
     // King County parcel area layer — includes zoning and use classification.
     // PRESENTUSE codes: 23=Park/Rec, 300-399=Commercial, 400-499=Industrial.
     // Filter on 300-499 to catch retail-auto, service, light industrial.
-    url: 'https://gisdata.kingcounty.gov/arcgis/rest/services/OpenDataPortal/property__parcel_area/FeatureServer/0/query',
-    where: "(PRESENTUSE >= 300 AND PRESENTUSE <= 499) OR (ZONE_CLASS LIKE 'I%') OR (ZONE_CLASS LIKE 'C%')",
+    url: 'https://gisdata.kingcounty.gov/arcgis/rest/services/OpenDataPortal/property__parcel_address_area/MapServer/1722/query',
+    where: "PROPTYPE IN ('C','I')",
     maxFeatures: 200,
   },
 
@@ -347,7 +347,7 @@ const COUNTY_SOURCES = [
     // Clark County public taxlots (single-part geometry for reliable centroids).
     // Zoning field is ZONING; automotive codes: M1, M2, CC, CG, IL, IH.
     url: 'https://gis.clark.wa.gov/arcgisfed/rest/services/Hosted/TaxlotsPublic_Singlepart/FeatureServer/0/query',
-    where: "ZONING IN ('M1','M2','IL','IH','CG','CC','I-L','I-H') OR ZONING LIKE 'M%' OR ZONING LIKE 'I%'",
+    where: "pt1desc LIKE '%COMMERCIAL%' OR pt1desc LIKE '%INDUSTRIAL%' OR pt1desc LIKE '%WAREHOUSE%' OR pt1desc LIKE '%MANUFACTURING%' OR zonedesc LIKE 'M-%' OR zonedesc LIKE 'IL%' OR zonedesc LIKE 'IH%' OR zonedesc LIKE 'CC%' OR zonedesc LIKE 'CG%' OR zonedesc LIKE 'BP%'",
     maxFeatures: 200,
   },
 
@@ -442,7 +442,9 @@ const COUNTY_SOURCES = [
     county: 'Shasta', state: 'CA', idPrefix: 'CA',
     // Shasta County public parcel lookup — includes APN, address, use code.
     // Prop class codes: 300s = commercial, 400s = industrial.
-    url: 'https://maps.co.shasta.ca.us/arcgis/rest/services/ParcelLookUp/FeatureServer/0/query',
+    // maps.co.shasta.ca.us blocks requests from Google servers.
+    // TODO: find hosted FeatureServer at https://data-shasta.opendata.arcgis.com/
+    url: null,
     where: "(PROPCLASS >= 300 AND PROPCLASS < 500) OR ZONING LIKE 'M%' OR ZONING LIKE 'I%'",
     maxFeatures: 200,
   },
@@ -472,7 +474,7 @@ const COUNTY_SOURCES = [
     // No ZONING field in this layer; filter by LANDUSE (numeric DOR codes).
     // 3000-3999 = commercial, 4000-4999 = industrial/manufacturing.
     url: 'https://gis4u.fresno.gov/arcgis/rest/services/PublicInfoServices/AddrParcelStreet/FeatureServer/0/query',
-    where: "(LANDUSE >= 3000 AND LANDUSE < 5000)",
+    where: "EXISTING_LAND_USE_TEXT LIKE '%industrial%' OR EXISTING_LAND_USE_TEXT LIKE '%commercial%' OR EXISTING_LAND_USE_TEXT LIKE '%warehouse%' OR EXISTING_LAND_USE_TEXT LIKE '%manufacturing%' OR ZONING_STRING LIKE 'M%' OR ZONING_STRING LIKE 'I%'",
     maxFeatures: 200,
   },
 
@@ -490,7 +492,9 @@ const COUNTY_SOURCES = [
     county: 'San Diego', state: 'CA', idPrefix: 'CA',
     // San Diego County all-parcels MapServer.  Filters on PROPTYPE for
     // commercial (C) and industrial (I) land use classifications.
-    url: 'https://gis-public.sandiegocounty.gov/arcgis/rest/services/sdep_warehouse/PARCELS_ALL/MapServer/0/query',
+    // San Diego PARCELS_ALL requires auth token — not publicly accessible.
+    // TODO: find a token-free endpoint at https://www.sangis.org/ or https://sdgis-sandag.opendata.arcgis.com/
+    url: null,
     where: "LAND_USE LIKE '%COMMERCIAL%' OR LAND_USE LIKE '%INDUSTRIAL%' OR LAND_USE LIKE '%MANUFACTURING%' OR PROPTYPE IN ('COMMERCIAL','INDUSTRIAL')",
     maxFeatures: 200,
   },
@@ -625,7 +629,8 @@ function parseGisFeature(feature, source) {
   // If geometry came back empty, try Census geocoder (costs a fetch — skip if no address)
   const rawAddress = pickField(a,
     'SITE_ADDR','SITE_ADD','SITUS_ADDR','SITUS','ADDRESS1','ADDRESS','PROP_ADDR',
-    'SITUS_STRE','FULL_ADDR','STR_ADDR','MAIL_ADDR','LOCATION','ADDR'
+    'SITUS_STRE','FULL_ADDR','STR_ADDR','MAIL_ADDR','LOCATION','ADDR',
+    'ADDR_FULL','situsaddrsfull','situsaddrs','SITUSADDR'
   ) || '';
 
   if ((!lat || !lng) && rawAddress) {
@@ -639,7 +644,7 @@ function parseGisFeature(feature, source) {
   // ── Lot size — may be acres or sqft depending on county
   let lotSqFt = parseFloat(pickField(a,
     'LOT_SIZE','LOT_SQFT','LOTSIZE','SHAPE_AREA','CALC_AREA','GIS_AREA','AREA_SQ_FT',
-    'SHAPESTAREA','SHAPE__AREA'
+    'SHAPESTAREA','SHAPE__AREA','LOTSQFT','gissqft','assrsqft','SIZESQFT'
   )) || 0;
 
   // If county stores acres, convert
@@ -654,11 +659,13 @@ function parseGisFeature(feature, source) {
 
   // ── Other fields
   const city = String(pickField(a,
-    'CITY','SITUS_CITY','SITE_CITY','PROP_CITY','MAIL_CITY','CITYNAME','CITY_NAME'
+    'CITY','SITUS_CITY','SITE_CITY','PROP_CITY','MAIL_CITY','CITYNAME','CITY_NAME',
+    'CTYNAME','KCTP_CITY','situscity','SITUSCITY'
   ) || '').trim();
 
   const zip = String(pickField(a,
-    'ZIP','ZIPCODE','ZIP_CODE','SITUS_ZIP','PROP_ZIP','MAIL_ZIP','POSTAL_CODE'
+    'ZIP','ZIPCODE','ZIP_CODE','SITUS_ZIP','PROP_ZIP','MAIL_ZIP','POSTAL_CODE',
+    'ZIP5','situszip1','SITUSZIP'
   ) || '').replace(/\D/g, '').substring(0, 5);
 
   const parcelId = String(pickField(a,
@@ -669,7 +676,7 @@ function parseGisFeature(feature, source) {
   const zoning = String(pickField(a,
     'ZONING','ZONE','ZONE_CODE','ZONE_TYPE','ZONING_CODE','CURRENT_ZONING',
     'ZONING_CLASS','ZONE_CLASS','ZONING_DESIGNATION','PROP_TYPE','USE_TYPE',
-    'LAND_USE_CODE','LANDUSE_CODE'
+    'LAND_USE_CODE','LANDUSE_CODE','KCA_ZONING','zonedesc','ZONING_STRING'
   ) || '').toUpperCase().trim();
 
   const zoningLabel = String(pickField(a,
@@ -679,23 +686,25 @@ function parseGisFeature(feature, source) {
 
   const currentUse = String(pickField(a,
     'CURRENT_USE','CURR_USE','USE_CODE','LAND_USE','LANDUSE','PROP_USE',
-    'PROPERTY_USE','USECLASS','USE_TYPE','PROPTYPE'
+    'PROPERTY_USE','USECLASS','USE_TYPE','PROPTYPE',
+    'EXISTING_LAND_USE_TEXT','pt1desc','complandesc','PREUSE_DESC'
   ) || '');
 
   const yearBuilt = parseInt(pickField(a,
     'YEAR_BUILT','YR_BLT','YRBUILT','YEAR_BLT','EFFECTIVE_YEAR','YR_BUILT',
-    'EFF_YR_BUI','BUILT_YEAR','BLDGYEAR'
+    'EFF_YR_BUI','BUILT_YEAR','BLDGYEAR','bldgyrblt','ACTYEARBUILT'
   )) || 0;
 
   const bldgSqFt = parseFloat(pickField(a,
     'BLDG_SQFT','BLDGSQFT','LIVING_AREA','FLOOR_AREA','BLDG_AREA',
-    'SQ_FT_TOT','TOTAL_BLDG_SQFT','BLDG_SF','GRSSQFT'
+    'SQ_FT_TOT','TOTAL_BLDG_SQFT','BLDG_SF','GRSSQFT','bldgsqft','MAIN_SQFT','MAINAREA'
   )) || 0;
 
   // Assessed value as price proxy (free; real asking price requires paid data)
   const assessedValue = parseFloat(pickField(a,
     'ASSESSED_VALUE','TOTAL_VALUE','TOTVALUE','AV_TOTAL','TAXABLE_VALUE',
-    'APRSDVALUE','TOTAL_AV','ASDVALUE','NET_VALUE','LAND_VALUE'
+    'APRSDVALUE','TOTAL_AV','ASDVALUE','NET_VALUE','LAND_VALUE',
+    'APPRLNDVAL','mkttotval','taxtotval','ROLLLAND'
   )) || 0;
 
   // ── Infer property type from zoning code
