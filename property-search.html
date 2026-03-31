@@ -803,7 +803,7 @@
 
           <!-- County -->
           <div class="ps-filter-group">
-            <h4>County</h4>
+            <h4>County — Washington</h4>
             <label><input type="checkbox" name="county" value="Thurston" checked /> Thurston</label>
             <label><input type="checkbox" name="county" value="Pierce" checked /> Pierce</label>
             <label><input type="checkbox" name="county" value="King" checked /> King</label>
@@ -811,6 +811,21 @@
             <label><input type="checkbox" name="county" value="Clark" checked /> Clark</label>
             <label><input type="checkbox" name="county" value="Kitsap" checked /> Kitsap</label>
             <label><input type="checkbox" name="county" value="Whatcom" checked /> Whatcom</label>
+            <h4 style="margin-top:10px;">County — Oregon</h4>
+            <label><input type="checkbox" name="county" value="Multnomah" checked /> Multnomah</label>
+            <label><input type="checkbox" name="county" value="Washington" checked /> Washington</label>
+            <label><input type="checkbox" name="county" value="Clackamas" checked /> Clackamas</label>
+            <label><input type="checkbox" name="county" value="Marion" checked /> Marion</label>
+            <label><input type="checkbox" name="county" value="Lane" checked /> Lane</label>
+            <label><input type="checkbox" name="county" value="Jackson" checked /> Jackson</label>
+            <h4 style="margin-top:10px;">County — California</h4>
+            <label><input type="checkbox" name="county" value="Siskiyou" checked /> Siskiyou</label>
+            <label><input type="checkbox" name="county" value="Shasta" checked /> Shasta</label>
+            <label><input type="checkbox" name="county" value="Sacramento" checked /> Sacramento</label>
+            <label><input type="checkbox" name="county" value="San Joaquin" checked /> San Joaquin</label>
+            <label><input type="checkbox" name="county" value="Fresno" checked /> Fresno</label>
+            <label><input type="checkbox" name="county" value="Los Angeles" checked /> Los Angeles</label>
+            <label><input type="checkbox" name="county" value="San Diego" checked /> San Diego</label>
           </div>
 
           <!-- Vacancy -->
@@ -866,6 +881,7 @@
       </div>
       <div class="ps-results" id="ps-results">
         <div class="ps-results-header">Property Results</div>
+        <div id="ps-feed-status" style="display:none; padding:10px 16px; font-size:0.8rem; border-bottom:1px solid var(--border);"></div>
         <div class="ps-results-list" id="ps-results-list">
           <!-- Cards injected by JS -->
         </div>
@@ -945,8 +961,8 @@
 
     /* ── CONFIGURATION ── */
     const CONFIG = {
-      mapCenter: [47.15, -122.5],   // Western WA center
-      mapZoom: 9,
+      mapCenter: [44.5, -122.8],   // I-5 corridor center (WA → OR → CA)
+      mapZoom: 6,
       epaEchoBase: 'https://echodata.epa.gov/echo/echo_rest_services.get_facilities',
       epaRadiusMiles: 2,
       anthropicModel: 'claude-sonnet-4-20250514',
@@ -954,291 +970,76 @@
       grandfatherVacancyCriticalMonths: 18
     };
 
-    /* ── DEMO PROPERTY DATA ──
-       In production, replace this array with API calls to Attom Data,
-       Regrid, CoStar, or county assessor APIs.
-       Each property object drives every feature in the tool. */
-    const PROPERTIES = [
-      {
-        id:'THR-001', address:'2814 Harrison Ave NW', city:'Olympia', county:'Thurston',
-        zip:'98502', lat:47.0477, lng:-122.9372, price:875000,
-        lotSqFt:18500, bldgSqFt:6200, zoning:'M1', zoningLabel:'Light Industrial',
-        propertyType:'retail-auto', description:'Former auto body and paint shop with 3-bay garage, paint booth room, and front office on high-traffic Harrison corridor.',
-        yearBuilt:1978, currentUse:'Auto Body Shop', lastActiveDate:'2025-08-15',
-        isVacant:true, vacantSince:'2025-08-15', isGrandfathered:true,
-        epaStatus:'flagged', fleetSuitable:false, fleetFeatures:[],
-        titleFlags:[], deedRestrictions:[], hasTitleData:true,
-        grandfatherRiskFactors:['Vacant 7+ months — approaching review threshold'],
-        listingSource:'Thurston County Assessor'
-      },
-      {
-        id:'THR-002', address:'4280 Martin Way E', city:'Olympia', county:'Thurston',
-        zip:'98516', lat:47.0420, lng:-122.8345, price:1350000,
-        lotSqFt:42000, bldgSqFt:0, zoning:'M2', zoningLabel:'Heavy Industrial',
-        propertyType:'industrial', description:'Large vacant industrial lot on Martin Way corridor, heavy industrial zoning allows wide range of automotive and fleet operations.',
-        yearBuilt:0, currentUse:'Vacant Land', lastActiveDate:null,
-        isVacant:true, vacantSince:null, isGrandfathered:false,
-        epaStatus:'clean', fleetSuitable:true, fleetFeatures:['Large lot','Heavy industrial zoning','Highway access'],
-        titleFlags:[], deedRestrictions:[], hasTitleData:true,
-        grandfatherRiskFactors:[],
-        listingSource:'Thurston County Assessor'
-      },
-      {
-        id:'THR-003', address:'1920 Black Lake Blvd SW', city:'Tumwater', county:'Thurston',
-        zip:'98512', lat:46.9912, lng:-122.9185, price:1100000,
-        lotSqFt:35000, bldgSqFt:12000, zoning:'C2', zoningLabel:'General Commercial',
-        propertyType:'retail-auto', description:'Former auto dealership with showroom, service bays, and customer lot. High visibility location near I-5.',
-        yearBuilt:1992, currentUse:'Former Dealership', lastActiveDate:'2024-11-01',
-        isVacant:true, vacantSince:'2024-11-01', isGrandfathered:true,
-        epaStatus:'clean', fleetSuitable:false, fleetFeatures:[],
-        titleFlags:['Environmental covenant on file'], deedRestrictions:['Stormwater management plan required'], hasTitleData:true,
-        grandfatherRiskFactors:['Vacant 16+ months — HIGH risk of losing nonconforming use','Jurisdiction requires active use within 18 months'],
-        listingSource:'Thurston County Assessor'
-      },
-      {
-        id:'THR-004', address:'3400 Pacific Ave SE', city:'Olympia', county:'Thurston',
-        zip:'98501', lat:47.0300, lng:-122.8850, price:2200000,
-        lotSqFt:68000, bldgSqFt:22000, zoning:'M1', zoningLabel:'Light Industrial',
-        propertyType:'fleet', description:'Fleet-ready warehouse with 6 drive-through maintenance bays, truck-height doors, fenced yard, and office space.',
-        yearBuilt:2001, currentUse:'Warehouse / Fleet', lastActiveDate:'2026-02-01',
-        isVacant:false, vacantSince:null, isGrandfathered:false,
-        epaStatus:'clean', fleetSuitable:true, fleetFeatures:['6 maintenance bays','Truck-height doors','Fenced yard','Office space'],
-        titleFlags:[], deedRestrictions:[], hasTitleData:true,
-        grandfatherRiskFactors:[],
-        listingSource:'Thurston County Assessor'
-      },
-      {
-        id:'THR-005', address:'5800 Lacey Blvd SE', city:'Lacey', county:'Thurston',
-        zip:'98503', lat:47.0380, lng:-122.8110, price:650000,
-        lotSqFt:14000, bldgSqFt:5500, zoning:'C2', zoningLabel:'General Commercial',
-        propertyType:'retail-auto', description:'Auto parts warehouse and retail shop with loading dock and customer parking.',
-        yearBuilt:1985, currentUse:'Auto Parts Retail', lastActiveDate:'2026-01-15',
-        isVacant:false, vacantSince:null, isGrandfathered:true,
-        epaStatus:'clean', fleetSuitable:false, fleetFeatures:[],
-        titleFlags:['Deed restriction: automotive use only'], deedRestrictions:['Automotive use only covenant','No hazardous chemical storage above EPA minimums'], hasTitleData:true,
-        grandfatherRiskFactors:[],
-        listingSource:'Thurston County Assessor'
-      },
-      {
-        id:'PIE-001', address:'5412 S Tacoma Way', city:'Tacoma', county:'Pierce',
-        zip:'98409', lat:47.2150, lng:-122.4700, price:780000,
-        lotSqFt:12000, bldgSqFt:4800, zoning:'M1', zoningLabel:'Light Industrial',
-        propertyType:'retail-auto', description:'Active auto repair shop with 4 lifts, alignment rack, and customer lobby. Established business corridor.',
-        yearBuilt:1974, currentUse:'Auto Repair', lastActiveDate:'2026-03-01',
-        isVacant:false, vacantSince:null, isGrandfathered:true,
-        epaStatus:'clean', fleetSuitable:false, fleetFeatures:[],
-        titleFlags:[], deedRestrictions:[], hasTitleData:true,
-        grandfatherRiskFactors:[],
-        listingSource:'Pierce County Assessor'
-      },
-      {
-        id:'PIE-002', address:'8200 Steilacoom Blvd SW', city:'Lakewood', county:'Pierce',
-        zip:'98498', lat:47.1680, lng:-122.5250, price:420000,
-        lotSqFt:28000, bldgSqFt:0, zoning:'M2', zoningLabel:'Heavy Industrial',
-        propertyType:'industrial', description:'Brownfield site — former industrial fuel storage. Deep discount due to remediation needs. Phase II ESA completed 2023.',
-        yearBuilt:0, currentUse:'Vacant Brownfield', lastActiveDate:null,
-        isVacant:true, vacantSince:'2020-03-01', isGrandfathered:false,
-        epaStatus:'brownfield', fleetSuitable:false, fleetFeatures:[],
-        titleFlags:['Environmental lien on title','Remediation covenant'], deedRestrictions:['Institutional controls — groundwater monitoring required','Soil vapor extraction system must be maintained'], hasTitleData:true,
-        grandfatherRiskFactors:[],
-        listingSource:'Pierce County Assessor / WA Ecology'
-      },
-      {
-        id:'PIE-003', address:'12015 Meridian Ave E', city:'Puyallup', county:'Pierce',
-        zip:'98373', lat:47.1750, lng:-122.2930, price:3100000,
-        lotSqFt:95000, bldgSqFt:30000, zoning:'M2', zoningLabel:'Heavy Industrial',
-        propertyType:'fleet', description:'Large industrial complex with heavy vehicle bays, wash station, fuel island, and fenced equipment yard. Ideal for fleet operations.',
-        yearBuilt:2008, currentUse:'Fleet Maintenance', lastActiveDate:'2026-02-15',
-        isVacant:false, vacantSince:null, isGrandfathered:false,
-        epaStatus:'clean', fleetSuitable:true, fleetFeatures:['Heavy vehicle bays','Wash station','Fuel island','Equipment yard','Weight scale'],
-        titleFlags:[], deedRestrictions:[], hasTitleData:true,
-        grandfatherRiskFactors:[],
-        listingSource:'Pierce County Assessor'
-      },
-      {
-        id:'PIE-004', address:'3818 Pacific Ave', city:'Tacoma', county:'Pierce',
-        zip:'98418', lat:47.2340, lng:-122.4480, price:510000,
-        lotSqFt:10000, bldgSqFt:3200, zoning:'C2', zoningLabel:'General Commercial',
-        propertyType:'retail-auto', description:'Former tire and brake shop, vacant 22 months. Grandfathered nonconforming status at critical risk.',
-        yearBuilt:1969, currentUse:'Former Tire Shop', lastActiveDate:'2024-05-01',
-        isVacant:true, vacantSince:'2024-05-01', isGrandfathered:true,
-        epaStatus:'flagged', fleetSuitable:false, fleetFeatures:[],
-        titleFlags:[], deedRestrictions:['Height restriction: 35ft max'], hasTitleData:true,
-        grandfatherRiskFactors:['Vacant 22 months — EXCEEDS typical nonconforming use window','Pierce County requires active use within 12 months of vacancy','Building needs structural repair (roof, foundation cracks)'],
-        listingSource:'Pierce County Assessor'
-      },
-      {
-        id:'PIE-005', address:'1200 E Valley Rd', city:'Sumner', county:'Pierce',
-        zip:'98390', lat:47.2030, lng:-122.2380, price:2750000,
-        lotSqFt:80000, bldgSqFt:25000, zoning:'M1', zoningLabel:'Light Industrial',
-        propertyType:'commercial-vehicle', description:'Commercial vehicle service and logistics hub with 8 bays, refrigeration maintenance capability, and DOT inspection lane.',
-        yearBuilt:2012, currentUse:'Commercial Vehicle Service', lastActiveDate:'2026-02-20',
-        isVacant:false, vacantSince:null, isGrandfathered:false,
-        epaStatus:'clean', fleetSuitable:true, fleetFeatures:['8 service bays','DOT inspection lane','Refrigeration maintenance','Loading docks'],
-        titleFlags:[], deedRestrictions:[], hasTitleData:true,
-        grandfatherRiskFactors:[],
-        listingSource:'Pierce County Assessor'
-      },
-      {
-        id:'KIN-001', address:'25207 Pacific Hwy S', city:'Kent', county:'King',
-        zip:'98032', lat:47.3750, lng:-122.2960, price:920000,
-        lotSqFt:16000, bldgSqFt:4000, zoning:'C2', zoningLabel:'General Commercial',
-        propertyType:'retail-auto', description:'Former gas station and convenience store. Underground storage tanks decommissioned 2019. Phase I ESA recommends further investigation.',
-        yearBuilt:1982, currentUse:'Former Gas Station', lastActiveDate:'2024-08-01',
-        isVacant:true, vacantSince:'2024-08-01', isGrandfathered:true,
-        epaStatus:'flagged', fleetSuitable:false, fleetFeatures:[],
-        titleFlags:['UST decommission recorded','Environmental covenant'], deedRestrictions:['Groundwater monitoring covenant'], hasTitleData:true,
-        grandfatherRiskFactors:['Vacant 7 months','Site may require environmental remediation before reuse'],
-        listingSource:'King County Assessor'
-      },
-      {
-        id:'KIN-002', address:'4102 Auburn Way N', city:'Auburn', county:'King',
-        zip:'98002', lat:47.3180, lng:-122.2230, price:1650000,
-        lotSqFt:45000, bldgSqFt:15000, zoning:'M1', zoningLabel:'Light Industrial',
-        propertyType:'industrial', description:'Industrial parcel with existing warehouse, roll-up doors, and paved yard. Strong candidate for automotive conversion.',
-        yearBuilt:1996, currentUse:'General Warehouse', lastActiveDate:'2026-01-01',
-        isVacant:false, vacantSince:null, isGrandfathered:false,
-        epaStatus:'clean', fleetSuitable:true, fleetFeatures:['Roll-up doors','Paved yard','Warehouse space'],
-        titleFlags:[], deedRestrictions:[], hasTitleData:true,
-        grandfatherRiskFactors:[],
-        listingSource:'King County Assessor'
-      },
-      {
-        id:'KIN-003', address:'13240 Tukwila Intl Blvd', city:'Tukwila', county:'King',
-        zip:'98168', lat:47.4720, lng:-122.2810, price:1200000,
-        lotSqFt:20000, bldgSqFt:8000, zoning:'AUTO', zoningLabel:'Auto-Specific',
-        propertyType:'retail-auto', description:'Active auto service center with 6 bays, alignment rack, tire machine, and customer lounge. Auto-specific zoning protects use.',
-        yearBuilt:1988, currentUse:'Auto Service Center', lastActiveDate:'2026-03-01',
-        isVacant:false, vacantSince:null, isGrandfathered:true,
-        epaStatus:'clean', fleetSuitable:false, fleetFeatures:[],
-        titleFlags:[], deedRestrictions:[], hasTitleData:true,
-        grandfatherRiskFactors:[],
-        listingSource:'King County Assessor'
-      },
-      {
-        id:'KIN-004', address:'800 SW Grady Way', city:'Renton', county:'King',
-        zip:'98057', lat:47.4810, lng:-122.2190, price:4200000,
-        lotSqFt:120000, bldgSqFt:40000, zoning:'M2', zoningLabel:'Heavy Industrial',
-        propertyType:'fleet', description:'Major fleet maintenance complex: 12 bays, heavy equipment lifts, parts warehouse, admin offices, fuel depot. Suitable for state/federal fleet contracts.',
-        yearBuilt:2005, currentUse:'Fleet Maintenance Complex', lastActiveDate:'2026-02-28',
-        isVacant:false, vacantSince:null, isGrandfathered:false,
-        epaStatus:'clean', fleetSuitable:true, fleetFeatures:['12 maintenance bays','Heavy equipment lifts','Parts warehouse','Fuel depot','Admin offices'],
-        titleFlags:[], deedRestrictions:[], hasTitleData:true,
-        grandfatherRiskFactors:[],
-        listingSource:'King County Assessor'
-      },
-      {
-        id:'SNO-001', address:'4515 Rucker Ave', city:'Everett', county:'Snohomish',
-        zip:'98201', lat:47.9820, lng:-122.2050, price:1450000,
-        lotSqFt:32000, bldgSqFt:10000, zoning:'M1', zoningLabel:'Light Industrial',
-        propertyType:'industrial', description:'Industrial lot with clear-span building near Port of Everett. Good access to I-5 and Boeing corridor.',
-        yearBuilt:1990, currentUse:'Light Manufacturing', lastActiveDate:'2026-01-15',
-        isVacant:false, vacantSince:null, isGrandfathered:false,
-        epaStatus:'clean', fleetSuitable:true, fleetFeatures:['Clear-span building','I-5 access','Port proximity'],
-        titleFlags:[], deedRestrictions:[], hasTitleData:false,
-        grandfatherRiskFactors:[],
-        listingSource:'Snohomish County Assessor'
-      },
-      {
-        id:'SNO-002', address:'7115 State Ave', city:'Marysville', county:'Snohomish',
-        zip:'98270', lat:48.0510, lng:-122.1770, price:890000,
-        lotSqFt:22000, bldgSqFt:7500, zoning:'MU', zoningLabel:'Mixed Use',
-        propertyType:'retail-auto', description:'Former car dealership — showroom plus 3 service bays. Mixed use zone limits new auto permits but grandfathered use may continue.',
-        yearBuilt:1995, currentUse:'Former Dealership', lastActiveDate:'2025-06-01',
-        isVacant:true, vacantSince:'2025-06-01', isGrandfathered:true,
-        epaStatus:'clean', fleetSuitable:false, fleetFeatures:[],
-        titleFlags:[], deedRestrictions:['Signage height restriction'], hasTitleData:true,
-        grandfatherRiskFactors:['Vacant 9 months','Mixed-use zone — new auto permits unlikely if grandfathered status lost'],
-        listingSource:'Snohomish County Assessor'
-      },
-      {
-        id:'CLK-001', address:'8714 NE Hwy 99', city:'Vancouver', county:'Clark',
-        zip:'98665', lat:45.6650, lng:-122.6620, price:980000,
-        lotSqFt:24000, bldgSqFt:6000, zoning:'AUTO', zoningLabel:'Auto-Specific',
-        propertyType:'retail-auto', description:'Auto-zoned lot on Hwy 99 auto row. Currently operating as used car lot with small service garage.',
-        yearBuilt:1980, currentUse:'Used Car Lot', lastActiveDate:'2026-02-15',
-        isVacant:false, vacantSince:null, isGrandfathered:true,
-        epaStatus:'clean', fleetSuitable:false, fleetFeatures:[],
-        titleFlags:[], deedRestrictions:[], hasTitleData:true,
-        grandfatherRiskFactors:[],
-        listingSource:'Clark County Assessor'
-      },
-      {
-        id:'CLK-002', address:'4200 NE 78th St', city:'Vancouver', county:'Clark',
-        zip:'98665', lat:45.6580, lng:-122.6450, price:375000,
-        lotSqFt:30000, bldgSqFt:0, zoning:'M1', zoningLabel:'Light Industrial',
-        propertyType:'industrial', description:'Brownfield — former dry cleaning solvent facility. Significant soil contamination. Deep discount, requires remediation.',
-        yearBuilt:0, currentUse:'Vacant Brownfield', lastActiveDate:null,
-        isVacant:true, vacantSince:'2018-01-01', isGrandfathered:false,
-        epaStatus:'brownfield', fleetSuitable:false, fleetFeatures:[],
-        titleFlags:['Environmental lien','Remediation deed restriction'], deedRestrictions:['Institutional controls — vapor intrusion mitigation required','Land use restricted to commercial/industrial'], hasTitleData:true,
-        grandfatherRiskFactors:[],
-        listingSource:'Clark County / WA Ecology'
-      },
-      {
-        id:'CLK-003', address:'11304 NE Fourth Plain Blvd', city:'Vancouver', county:'Clark',
-        zip:'98662', lat:45.6370, lng:-122.5980, price:720000,
-        lotSqFt:15000, bldgSqFt:5000, zoning:'C2', zoningLabel:'General Commercial',
-        propertyType:'retail-auto', description:'Former service station with auto repair. USTs removed 2020, monitoring wells active.',
-        yearBuilt:1975, currentUse:'Former Service Station', lastActiveDate:'2025-03-01',
-        isVacant:true, vacantSince:'2025-03-01', isGrandfathered:true,
-        epaStatus:'flagged', fleetSuitable:false, fleetFeatures:[],
-        titleFlags:['UST removal documented','Active monitoring wells'], deedRestrictions:['Groundwater monitoring required through 2028'], hasTitleData:true,
-        grandfatherRiskFactors:['Vacant 12 months','Environmental remediation may require site alterations'],
-        listingSource:'Clark County Assessor'
-      },
-      {
-        id:'KIT-001', address:'5550 Auto Center Way', city:'Bremerton', county:'Kitsap',
-        zip:'98312', lat:47.5680, lng:-122.6290, price:1800000,
-        lotSqFt:55000, bldgSqFt:18000, zoning:'AUTO', zoningLabel:'Auto-Specific',
-        propertyType:'fleet', description:'Auto Center Way corridor — large auto-zoned facility with fleet maintenance capability, customer service area, and parts storage.',
-        yearBuilt:2002, currentUse:'Auto Dealership / Service', lastActiveDate:'2026-02-01',
-        isVacant:false, vacantSince:null, isGrandfathered:false,
-        epaStatus:'clean', fleetSuitable:true, fleetFeatures:['Fleet bays','Parts storage','Auto-zoned corridor'],
-        titleFlags:[], deedRestrictions:[], hasTitleData:true,
-        grandfatherRiskFactors:[],
-        listingSource:'Kitsap County Assessor'
-      },
-      {
-        id:'WHA-001', address:'1425 Iowa St', city:'Bellingham', county:'Whatcom',
-        zip:'98229', lat:48.7600, lng:-122.4880, price:1250000,
-        lotSqFt:38000, bldgSqFt:12000, zoning:'M1', zoningLabel:'Light Industrial',
-        propertyType:'industrial', description:'Industrial parcel near I-5 corridor. Clear-span steel building suitable for vehicle service or fleet operations.',
-        yearBuilt:1998, currentUse:'Industrial Warehouse', lastActiveDate:'2026-01-20',
-        isVacant:false, vacantSince:null, isGrandfathered:false,
-        epaStatus:'clean', fleetSuitable:true, fleetFeatures:['Clear-span steel building','I-5 proximity','Loading docks'],
-        titleFlags:[], deedRestrictions:[], hasTitleData:false,
-        grandfatherRiskFactors:[],
-        listingSource:'Whatcom County Assessor'
-      }
-    ];
+    /* ── LIVE PROPERTY FEED ──
+   Data is served from a Google Apps Script Web App (ARES backend).
+   Set FEED_URL below to your deployed Apps Script URL.
+   Falls back to empty array if feed is unreachable. */
 
-    /* County assessor portal — verified official search URLs for each county (2026) */
+    // ⚠️  PASTE YOUR APPS SCRIPT WEB APP URL HERE after deploying the backend:
+    const FEED_URL = 'PASTE_YOUR_APPS_SCRIPT_URL_HERE';
+
+    let PROPERTIES = [];   // populated by loadFeed() on init
+    let FEED_LOADED = false;
+
+    function loadFeed(callback) {
+      if (!FEED_URL || FEED_URL === 'PASTE_YOUR_APPS_SCRIPT_URL_HERE') {
+        showFeedStatus('No feed URL configured. Add your Apps Script URL to property-search.html.', true);
+        callback([]);
+        return;
+      }
+      showFeedStatus('Loading properties…', false);
+      fetch(FEED_URL)
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          PROPERTIES = data.properties || [];
+          FEED_LOADED = true;
+          hideFeedStatus();
+          callback(PROPERTIES);
+        })
+        .catch(function(err) {
+          console.error('Feed load error:', err);
+          showFeedStatus('Could not load property feed. Check your feed URL and deployment.', true);
+          callback([]);
+        });
+    }
+
+    function showFeedStatus(msg, isError) {
+      var el = document.getElementById('ps-feed-status');
+      if (!el) return;
+      el.textContent = msg;
+      el.style.display = 'block';
+      el.style.background = isError ? 'rgba(200,16,46,0.12)' : 'rgba(255,255,255,0.05)';
+      el.style.color = isError ? '#ef4444' : 'var(--dim)';
+    }
+
+    function hideFeedStatus() {
+      var el = document.getElementById('ps-feed-status');
+      if (el) el.style.display = 'none';
+    }
+
     function getPortalUrl(p) {
       switch (p.county) {
-        case 'Thurston':
-          /* Thurston County parcel search — accepts address or parcel number */
-          return 'https://map.co.thurston.wa.us/parcelinfo/';
-        case 'Pierce':
-          /* Pierce County Assessor-Treasurer Information Portal (ATIP) — replaced legacy epip portal */
-          return 'https://atip.piercecountywa.gov/app/v2/parcelSearch/search';
-        case 'King':
-          /* King County Department of Assessments — eReal Property search by address or parcel */
-          return 'https://blue.kingcounty.com/Assessor/eRealProperty/default.aspx';
-        case 'Snohomish':
-          /* Snohomish County property tax and assessment search */
-          return 'https://www.snoco.org/proptax/';
-        case 'Clark':
-          /* Clark County GIS Property Information Center — search by address or tax account */
-          return 'https://gis.clark.wa.gov/gishome/property/';
-        case 'Kitsap':
-          /* Kitsap County parcel details search */
-          return 'https://psearch.kitsapgov.com/pdetails/default.aspx';
-        case 'Whatcom':
-          /* Whatcom County Assessor & Treasurer property search */
-          return 'https://property.whatcomcounty.us/propertyaccess/?cid=0';
-        default:
-          return '#';
+        case 'Thurston':  return 'https://map.co.thurston.wa.us/parcelinfo/';
+        case 'Pierce':    return 'https://atip.piercecountywa.gov/app/v2/parcelSearch/search';
+        case 'King':      return 'https://blue.kingcounty.com/Assessor/eRealProperty/default.aspx';
+        case 'Snohomish': return 'https://www.snoco.org/proptax/';
+        case 'Clark':     return 'https://gis.clark.wa.gov/gishome/property/';
+        case 'Kitsap':    return 'https://psearch.kitsapgov.com/pdetails/default.aspx';
+        case 'Whatcom':   return 'https://property.whatcomcounty.us/propertyaccess/?cid=0';
+        case 'Multnomah': return 'https://multcoproptax.com/Property-Search';
+        case 'Washington': return 'https://www.co.washington.or.us/AssessmentTaxation/PropertySearch/';
+        case 'Clackamas': return 'https://www.clackamas.us/at/propertysearch.html';
+        case 'Marion':    return 'https://www.co.marion.or.us/AE/Pages/PropertySearch.aspx';
+        case 'Lane':      return 'https://www.lanecounty.org/government/county_departments/assessment_taxation/property_search';
+        case 'Jackson':   return 'https://www.jacksoncountyor.gov/Assessor/Property-Search';
+        case 'Siskiyou':    return 'https://siskiyouassessor.com/';
+        case 'Shasta':      return 'https://www.co.shasta.ca.us/departments/assessor/property-search';
+        case 'Sacramento':  return 'https://assessor.saccounty.gov/PropertySearch/';
+        case 'San Joaquin': return 'https://sjcasr.info/';
+        case 'Fresno':      return 'https://assessor.fresnocountyca.gov/property-search';
+        case 'Los Angeles': return 'https://assessor.lacounty.gov/';
+        case 'San Diego':   return 'https://arcc.sdcounty.ca.gov/Pages/Assessor-Recorder-County-Clerk.aspx';
+        default: return '#';
       }
     }
 
@@ -1247,7 +1048,7 @@
       map: null,
       markers: {},
       markerLayer: null,
-      filteredProperties: [...PROPERTIES],
+      filteredProperties: [],
       selectedProperty: null,
       settings: JSON.parse(localStorage.getItem('ares_ps_settings') || '{"apiKey":"","proxyUrl":""}')
     };
@@ -2004,7 +1805,11 @@
     function init() {
       initMap();
       initEvents();
-      applyFilters(); /* renders everything */
+      loadFeed(function(properties) {
+        PROPERTIES = properties;
+        STATE.filteredProperties = [...PROPERTIES];
+        applyFilters();
+      });
     }
 
     /* Boot the app when DOM is ready */
