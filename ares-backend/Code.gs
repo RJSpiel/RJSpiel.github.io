@@ -937,3 +937,89 @@ function testImport() {
     }
   });
 }
+
+
+// ── DIAGNOSTIC: test every configured endpoint and report field names ──────
+// Run this FIRST if importFromCountyGIS() adds nothing to the sheet.
+// It tests each non-null county source and logs:
+//   • HTTP status from the ArcGIS server
+//   • How many features the WHERE clause returned
+//   • All field names available in the first feature (so you can fix the WHERE)
+//   • The raw attribute values of the first feature
+// Read the output in: Apps Script editor → Executions (left sidebar) → click the run
+function diagnoseCountySources() {
+  const configured = COUNTY_SOURCES.filter(function(s) { return s.url !== null; });
+  Logger.log('Diagnosing ' + configured.length + ' configured county sources...\n');
+
+  configured.forEach(function(source) {
+    Logger.log('══════════════════════════════════════');
+    Logger.log('COUNTY: ' + source.county + ', ' + source.state);
+    Logger.log('URL:    ' + source.url);
+    Logger.log('WHERE:  ' + source.where);
+
+    try {
+      // 1 — test raw fetch with only 1 record and the real WHERE clause
+      var qs1 = [
+        'where=' + encodeURIComponent(source.where || '1=1'),
+        'outFields=*',
+        'returnGeometry=false',
+        'resultRecordCount=1',
+        'f=json',
+      ].join('&');
+      var r1 = UrlFetchApp.fetch(source.url + '?' + qs1, { muteHttpExceptions: true });
+      var d1 = JSON.parse(r1.getContentText());
+
+      if (d1.error) {
+        Logger.log('❌ ArcGIS ERROR: ' + JSON.stringify(d1.error));
+        Logger.log('   → WHERE clause likely references a field that does not exist.');
+
+        // 2 — fallback: fetch 1 record with no filter to reveal available fields
+        Logger.log('   → Fetching 1 record with WHERE=1=1 to show available fields...');
+        var qs2 = 'where=1%3D1&outFields=*&returnGeometry=false&resultRecordCount=1&f=json';
+        var r2 = UrlFetchApp.fetch(source.url + '?' + qs2, { muteHttpExceptions: true });
+        var d2 = JSON.parse(r2.getContentText());
+
+        if (d2.features && d2.features.length > 0) {
+          var fields = Object.keys(d2.features[0].attributes);
+          Logger.log('   AVAILABLE FIELDS (' + fields.length + '): ' + fields.join(', '));
+          Logger.log('   SAMPLE VALUES: ' + JSON.stringify(d2.features[0].attributes));
+        } else if (d2.error) {
+          Logger.log('   ❌ Fallback also failed: ' + JSON.stringify(d2.error));
+          Logger.log('   → The URL itself may be wrong or the service is offline.');
+        }
+
+      } else if (!d1.features || d1.features.length === 0) {
+        Logger.log('⚠️  WHERE clause returned 0 results.');
+        Logger.log('   → The endpoint is reachable but the filter matches nothing.');
+
+        // Fetch 1 record with no filter to show available fields
+        var qs3 = 'where=1%3D1&outFields=*&returnGeometry=false&resultRecordCount=1&f=json';
+        var r3 = UrlFetchApp.fetch(source.url + '?' + qs3, { muteHttpExceptions: true });
+        var d3 = JSON.parse(r3.getContentText());
+
+        if (d3.features && d3.features.length > 0) {
+          var flds = Object.keys(d3.features[0].attributes);
+          Logger.log('   AVAILABLE FIELDS (' + flds.length + '): ' + flds.join(', '));
+          Logger.log('   SAMPLE VALUES: ' + JSON.stringify(d3.features[0].attributes));
+          Logger.log('   → Use the field names above to rewrite the WHERE clause.');
+        }
+
+      } else {
+        Logger.log('✅ WHERE clause works — ' + (d1.features.length) + ' feature(s) matched.');
+        var attrs = d1.features[0].attributes;
+        Logger.log('   AVAILABLE FIELDS (' + Object.keys(attrs).length + '): ' + Object.keys(attrs).join(', '));
+        Logger.log('   SAMPLE VALUES: ' + JSON.stringify(attrs));
+      }
+
+    } catch(e) {
+      Logger.log('❌ EXCEPTION: ' + e.message);
+    }
+
+    Logger.log(''); // blank line between counties
+    Utilities.sleep(300);
+  });
+
+  Logger.log('══════════════════════════════════════');
+  Logger.log('Diagnosis complete. Read the output above to fix WHERE clauses.');
+  Logger.log('Once WHERE clauses are fixed, run importFromCountyGIS() again.');
+}
