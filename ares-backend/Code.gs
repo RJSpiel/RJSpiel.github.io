@@ -347,7 +347,7 @@ const COUNTY_SOURCES = [
     // Clark County public taxlots (single-part geometry for reliable centroids).
     // Zoning field is ZONING; automotive codes: M1, M2, CC, CG, IL, IH.
     url: 'https://gis.clark.wa.gov/arcgisfed/rest/services/Hosted/TaxlotsPublic_Singlepart/FeatureServer/0/query',
-    where: "pt1desc LIKE '%COMMERCIAL%' OR pt1desc LIKE '%INDUSTRIAL%' OR pt1desc LIKE '%WAREHOUSE%' OR pt1desc LIKE '%MANUFACTURING%' OR zonedesc LIKE 'M-%' OR zonedesc LIKE 'IL%' OR zonedesc LIKE 'IH%' OR zonedesc LIKE 'CC%' OR zonedesc LIKE 'CG%' OR zonedesc LIKE 'BP%'",
+    where: "(pt1 >= 200 AND pt1 < 500) OR propertyuseclass LIKE '%Commercial%' OR propertyuseclass LIKE '%Industrial%' OR propertyuseclass LIKE '%Manufacturing%'",
     maxFeatures: 200,
   },
 
