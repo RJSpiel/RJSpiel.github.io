@@ -139,6 +139,62 @@ function runVetting() {
   CacheService.getScriptCache().remove(CONFIG.CACHE_KEY);
 }
 
+// ── VET ALL DRAFT ROWS IN ONE CLICK ───────────────────────────────────────
+// Convenience function: promotes every Draft row to Pending, then runs the
+// full AI + EPA vetting pass. Use this instead of manually changing statuses.
+// Rows that score < AUTO_REJECT_THRESHOLD are automatically set to Rejected.
+// Rows that score ≥ threshold stay Pending for your manual Approve/Reject.
+function vetAllDraft() {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(CONFIG.SHEET_NAME);
+  if (!sheet) { Logger.log('ERROR: Sheet not found.'); return; }
+
+  const apiKey = PropertiesService.getScriptProperties().getProperty('ANTHROPIC_API_KEY');
+  if (!apiKey) {
+    Logger.log('ERROR: ANTHROPIC_API_KEY not set. Go to Apps Script → Project Settings → Script Properties and add it.');
+    return;
+  }
+
+  const data = sheet.getDataRange().getValues();
+  let promoted = 0;
+  let vetted   = 0;
+  let errors   = 0;
+
+  for (let i = 1; i < data.length; i++) {
+    const row = data[i];
+    if (!row[COL.ID - 1]) continue;
+    const status = String(row[COL.STATUS - 1] || '').trim();
+
+    // Promote Draft → Pending
+    if (status === 'Draft') {
+      sheet.getRange(i + 1, COL.STATUS).setValue('Pending');
+      row[COL.STATUS - 1] = 'Pending'; // update in-memory so vetRow sees the right value
+      promoted++;
+    }
+
+    // Vet anything that is now Pending
+    if (row[COL.STATUS - 1] === 'Pending') {
+      try {
+        Logger.log('[VET] Row ' + (i + 1) + ': ' + row[COL.ADDRESS - 1]);
+        vetRow(sheet, row, i + 1, apiKey);
+        vetted++;
+        Utilities.sleep(2000); // respect Anthropic rate limits
+      } catch(err) {
+        Logger.log('  ✗ Error on row ' + (i + 1) + ': ' + err.message);
+        sheet.getRange(i + 1, COL.AI_FLAGS).setValue('Vetting error: ' + err.message);
+        errors++;
+      }
+    }
+  }
+
+  CacheService.getScriptCache().remove(CONFIG.CACHE_KEY);
+  Logger.log('\n═══ Vetting Complete ═══');
+  Logger.log('Promoted Draft → Pending: ' + promoted);
+  Logger.log('Vetted:  ' + vetted);
+  Logger.log('Errors:  ' + errors);
+  Logger.log('Check the sheet — rows scoring ≥ 35 are Pending (review manually), < 35 are auto-Rejected.');
+}
+
+
 // ── VET A SINGLE ROW ──────────────────────────────────────────────────────
 function vetRow(sheet, row, rowNum, apiKey) {
   const cell = n => row[n - 1];
@@ -703,7 +759,15 @@ function parseGisFeature(feature, source) {
   const rawAddress = pickField(a,
     'SITE_ADDR','SITE_ADD','SITUS_ADDR','SITUS','ADDRESS1','ADDRESS','PROP_ADDR',
     'SITUS_STRE','FULL_ADDR','STR_ADDR','MAIL_ADDR','LOCATION','ADDR',
-    'ADDR_FULL','situsaddrsfull','situsaddrs','SITUSADDR'
+    'ADDR_FULL','situsaddrsfull','situsaddrs','SITUSADDR',
+    // Clark WA / common WA variants
+    'siteaddress','SITEADDRESS','site_address','SITE_ADDRESS',
+    'parcel_addr','PARCEL_ADDR','propertyaddress','PROPERTYADDRESS',
+    'TAXLOT_ADDR','taxlot_addr','OWNER_ADDR','PHYSICAL_ADDR',
+    // Oregon variants
+    'PROP_STREET','SITUS_STREET','situs_street','STREETADDRESS',
+    // California variants
+    'SITE_STNAME','AIN','SITUS1','situs1','LOCATION_1'
   ) || '';
 
   if ((!lat || !lng) && rawAddress) {
@@ -733,23 +797,43 @@ function parseGisFeature(feature, source) {
   // ── Other fields
   const city = String(pickField(a,
     'CITY','SITUS_CITY','SITE_CITY','PROP_CITY','MAIL_CITY','CITYNAME','CITY_NAME',
-    'CTYNAME','KCTP_CITY','situscity','SITUSCITY'
+    'CTYNAME','KCTP_CITY','situscity','SITUSCITY',
+    // Clark WA / common WA variants
+    'sitecity','SITECITY','JURISDICTION','jurisdiction',
+    'INCORPORATED','CITY_UNINCORPORATED','MAIL_CITY_NAME',
+    // Oregon / California
+    'PROP_CITY_NAME','SITUS_CITY_NAME','CITY_OR_UNINC'
   ) || '').trim();
 
   const zip = String(pickField(a,
     'ZIP','ZIPCODE','ZIP_CODE','SITUS_ZIP','PROP_ZIP','MAIL_ZIP','POSTAL_CODE',
-    'ZIP5','situszip1','SITUSZIP'
+    'ZIP5','situszip1','SITUSZIP',
+    // Clark WA / common variants
+    'sitezip','SITEZIP','SITE_ZIP','ZIPCODE5','zip5','ZIP_5',
+    'PROP_ZIP_CODE','SITUS_ZIPCODE','MAIL_ZIPCODE'
   ) || '').replace(/\D/g, '').substring(0, 5);
 
   const parcelId = String(pickField(a,
     'APN','PARCEL_NO','PARCELID','PARCELNUMBER','PARCEL_NUM','PIN',
-    'TAXPARCELID','PARCEL_ID','APNNODASH','ACCOUNT_NO','ACCT_NUM'
+    'TAXPARCELID','PARCEL_ID','APNNODASH','ACCOUNT_NO','ACCT_NUM',
+    // Clark WA
+    'parcel_id','taxparcel','TAXPARCEL','parcelno','PARCELNO',
+    'assessorparcelno','ASSESSORPARCELNO','TaxlotID','TAXLOTID',
+    // Oregon / California
+    'MAPREF','mapref','MAP_TAXLOT','MAPTAXLOT','SITUS_APN','GIS_ACRES'
   ) || '');
 
   const zoning = String(pickField(a,
     'ZONING','ZONE','ZONE_CODE','ZONE_TYPE','ZONING_CODE','CURRENT_ZONING',
     'ZONING_CLASS','ZONE_CLASS','ZONING_DESIGNATION','PROP_TYPE','USE_TYPE',
-    'LAND_USE_CODE','LANDUSE_CODE','KCA_ZONING','zonedesc','ZONING_STRING'
+    'LAND_USE_CODE','LANDUSE_CODE','KCA_ZONING','zonedesc','ZONING_STRING',
+    // Clark WA / common WA variants
+    'ZONECODE','zonecode','ZONE_ABBR','zone_abbr','ZONING_ABBR',
+    'CompZone','COMPZONE','comp_zone','CURRENT_ZONE',
+    // Oregon variants
+    'COMP_PLAN','comp_plan','PLAN_DESIG','PLAN_DESIGNATION',
+    // California variants
+    'GeneralPlanDesignation','GENERAL_PLAN','GEN_PLAN','ZONE_DESC'
   ) || '').toUpperCase().trim();
 
   const zoningLabel = String(pickField(a,
@@ -760,7 +844,14 @@ function parseGisFeature(feature, source) {
   const currentUse = String(pickField(a,
     'CURRENT_USE','CURR_USE','USE_CODE','LAND_USE','LANDUSE','PROP_USE',
     'PROPERTY_USE','USECLASS','USE_TYPE','PROPTYPE',
-    'EXISTING_LAND_USE_TEXT','pt1desc','complandesc','PREUSE_DESC'
+    'EXISTING_LAND_USE_TEXT','pt1desc','complandesc','PREUSE_DESC',
+    // Clark WA — primary use class field
+    'propertyuseclass','PROPERTYUSECLASS','PropertyUseClass',
+    // Other common WA / OR / CA variants
+    'PROP_USE_CODE','LAND_USE_DESC','LANDUSEDESC','USEDESC',
+    'USECODEDESC','USE_DESCRIPTION','PROPERTY_CLASS',
+    'PROP_CLASS','CLASS_DESC','CLASSIFICATIONDESC',
+    'land_use_category','LAND_USE_CATEGORY','USE_CATEGORY'
   ) || '');
 
   const yearBuilt = parseInt(pickField(a,
@@ -997,6 +1088,47 @@ function appendRow(sheet, r) {
     r.lastVetted,       // AH Last Vetted
     r.notes,            // AI Notes
   ]);
+}
+
+
+// ── DIAGNOSTIC: show exactly what fields are populated for each county ─────
+// Run this when rows in the sheet are missing address / zoning / city etc.
+// It fetches the first 3 features from each county, parses them through
+// parseGisFeature, and logs which ARES fields are filled vs blank.
+// This tells you exactly which field names need to be added to the pickField lists.
+function diagnoseRow() {
+  const configured = COUNTY_SOURCES.filter(function(s) { return s.url !== null; });
+  configured.forEach(function(source) {
+    Logger.log('\n══ ' + source.county + ', ' + source.state + ' ══');
+    try {
+      const features = fetchCountyParcels(source);
+      Logger.log('Features from GIS: ' + features.length);
+      if (!features.length) { Logger.log('  ⚠ 0 features — check WHERE clause'); return; }
+
+      // Log raw attribute field names from the first feature
+      const rawAttrs = features[0].attributes;
+      Logger.log('RAW FIELDS AVAILABLE: ' + Object.keys(rawAttrs).join(', '));
+
+      // Parse first 3 features and show which ARES fields are filled / blank
+      features.slice(0, 3).forEach(function(f, idx) {
+        const row = parseGisFeature(f, source);
+        if (!row) { Logger.log('  Row ' + idx + ': unparseable'); return; }
+        Logger.log('  Row ' + idx + ':');
+        Logger.log('    address    : ' + (row.address    || '⚠ BLANK'));
+        Logger.log('    city       : ' + (row.city       || '⚠ BLANK'));
+        Logger.log('    zip        : ' + (row.zip        || '⚠ BLANK'));
+        Logger.log('    lat/lng    : ' + row.lat + ' / ' + row.lng + ((!row.lat || !row.lng) ? '  ⚠ MISSING COORDS' : ''));
+        Logger.log('    zoning     : ' + (row.zoning     || '⚠ BLANK'));
+        Logger.log('    currentUse : ' + (row.currentUse || '⚠ BLANK'));
+        Logger.log('    lotSqFt    : ' + (row.lotSqFt    || '⚠ BLANK'));
+        Logger.log('    bldgSqFt   : ' + (row.bldgSqFt   || '⚠ BLANK'));
+        Logger.log('    price      : ' + (row.price      || '⚠ BLANK'));
+        Logger.log('    yearBuilt  : ' + (row.yearBuilt  || '⚠ BLANK'));
+      });
+    } catch(e) {
+      Logger.log('  ERROR: ' + e.message);
+    }
+  });
 }
 
 
