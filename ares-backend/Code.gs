@@ -324,91 +324,67 @@ function checkEpa(lat, lng) {
 }
 
 // ── LISTING STATUS CHECK ──────────────────────────────────────────────────
-// Scrapes Crexi and LoopNet directly — no API key or cost required.
+// Uses the Google Custom Search API (free tier: 100 queries/day, no credit
+// card required) to search LoopNet, Crexi, CoStar, CommercialCafe, and
+// CityFeet for the property address.
+//
+// ONE-TIME SETUP (takes ~5 minutes, completely free):
+//   1. Go to https://console.cloud.google.com
+//      → Search "Custom Search API" → Enable it
+//      → Credentials → Create credentials → API key → copy it
+//   2. Go to https://programmablesearchengine.google.com
+//      → Add → name it anything → "Search the entire web" → Create
+//      → Copy the Search engine ID (labelled "cx")
+//   3. In Apps Script → Project Settings → Script Properties → Add 2 rows:
+//        GOOGLE_SEARCH_API_KEY  =  (your API key from step 1)
+//        GOOGLE_SEARCH_CX       =  (your Search engine ID from step 2)
 //
 // Returns: { listed: true/false/null, source: 'url or reason' }
-//   true  = confirmed listing found → keep property
-//   false = confirmed no results on a valid response → reject
-//   null  = site blocked the request or result was ambiguous → AI score decides
-//
-// Design principle: only auto-reject on CONFIRMED absence of a listing.
-// If the scraper is blocked (403, Cloudflare, etc.) we return null so the
-// property falls through to AI scoring rather than being wrongly rejected.
+//   true  = listing found on a major CRE site → keep property
+//   false = no results found → auto-reject
+//   null  = API keys not configured yet → AI score decides instead
 function checkListingStatus(address, city, state) {
-  const headers = {
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 ' +
-                  '(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-    'Accept-Language': 'en-US,en;q=0.9',
-  };
+  const props  = PropertiesService.getScriptProperties();
+  const apiKey = props.getProperty('GOOGLE_SEARCH_API_KEY');
+  const cx     = props.getProperty('GOOGLE_SEARCH_CX');
 
-  // ── 1. Try Crexi ─────────────────────────────────────────────────────────
-  try {
-    const crexiUrl = 'https://www.crexi.com/properties?address=' +
-      encodeURIComponent(address + ' ' + city + ' ' + state);
-    const r    = UrlFetchApp.fetch(crexiUrl, { muteHttpExceptions: true, headers: headers });
-    const code = r.getResponseCode();
-    const body = r.getContentText();
-
-    if (code === 200) {
-      // Crexi embeds property count in JSON-LD or visible text
-      if (body.match(/"totalResults"\s*:\s*[1-9]/) ||
-          body.match(/[1-9][0-9]* propert/i) ||
-          body.match(/[1-9][0-9]* result/i)) {
-        Logger.log('  ✔ Found on Crexi');
-        return { listed: true, source: crexiUrl };
-      }
-      if (body.match(/"totalResults"\s*:\s*0/) ||
-          body.match(/0 properties/i) ||
-          body.match(/no results found/i) ||
-          body.match(/no properties found/i)) {
-        Logger.log('  ✘ Not found on Crexi');
-        return { listed: false, source: 'Not found on Crexi' };
-      }
-      // Got HTML but can't parse a clear result — inconclusive
-      Logger.log('  ~ Crexi response ambiguous (could not parse listing count)');
-    } else {
-      Logger.log('  ~ Crexi returned HTTP ' + code + ' — blocked or unavailable');
-    }
-  } catch(e) {
-    Logger.log('  ~ Crexi check error: ' + e.message);
+  if (!apiKey || !cx) {
+    Logger.log('  ~ Listing check skipped — add GOOGLE_SEARCH_API_KEY and GOOGLE_SEARCH_CX to Script Properties');
+    return { listed: null, source: 'Google Search API not configured — see Code.gs setup instructions' };
   }
 
-  // ── 2. Try LoopNet ────────────────────────────────────────────────────────
+  const query = '"' + address + '" "' + city + '" "' + state + '" ' +
+    '(site:loopnet.com OR site:crexi.com OR site:costar.com OR ' +
+    'site:commercialcafe.com OR site:cityfeet.com)';
+
+  const url = 'https://www.googleapis.com/customsearch/v1' +
+    '?key=' + encodeURIComponent(apiKey) +
+    '&cx='  + encodeURIComponent(cx) +
+    '&num=3' +
+    '&q='   + encodeURIComponent(query);
+
   try {
-    const citySlug = (city + '-' + state).toLowerCase().replace(/[^a-z0-9]+/g, '-');
-    const loopUrl  = 'https://www.loopnet.com/search/commercial-real-estate/' +
-      citySlug + '/for-sale/?sk=' + encodeURIComponent(address);
-    const r    = UrlFetchApp.fetch(loopUrl, { muteHttpExceptions: true, headers: headers });
-    const code = r.getResponseCode();
-    const body = r.getContentText();
+    const response = UrlFetchApp.fetch(url, { muteHttpExceptions: true });
+    const data = JSON.parse(response.getContentText());
 
-    if (code === 200) {
-      // LoopNet embeds listing count in page title / meta / data attributes
-      if (body.match(/[1-9][0-9]* listing/i) ||
-          body.match(/"listingCount"\s*:\s*[1-9]/) ||
-          body.match(/[1-9][0-9]* commercial/i)) {
-        Logger.log('  ✔ Found on LoopNet');
-        return { listed: true, source: loopUrl };
-      }
-      if (body.match(/0 listing/i) ||
-          body.match(/no listing/i) ||
-          body.match(/no result/i) ||
-          body.match(/"listingCount"\s*:\s*0/)) {
-        Logger.log('  ✘ Not found on LoopNet');
-        return { listed: false, source: 'Not found on LoopNet' };
-      }
-      Logger.log('  ~ LoopNet response ambiguous (could not parse listing count)');
-    } else {
-      Logger.log('  ~ LoopNet returned HTTP ' + code + ' — likely bot-blocked');
+    if (data.error) {
+      Logger.log('  ⚠ Listing API error: ' + data.error.message);
+      return { listed: null, source: 'Search API error: ' + data.error.message };
     }
-  } catch(e) {
-    Logger.log('  ~ LoopNet check error: ' + e.message);
-  }
 
-  // ── 3. Both inconclusive — fall through to AI scoring ────────────────────
-  Logger.log('  ~ Listing check inconclusive — AI score will decide');
-  return { listed: null, source: 'Could not verify listing status — review manually' };
+    if (data.items && data.items.length > 0) {
+      const hit = data.items[0];
+      Logger.log('  ✔ Listed: ' + hit.link);
+      return { listed: true, source: hit.link };
+    }
+
+    Logger.log('  ✘ Not found on LoopNet/Crexi/CoStar');
+    return { listed: false, source: 'Not found on LoopNet/Crexi/CoStar' };
+
+  } catch(e) {
+    Logger.log('  ⚠ Listing check failed: ' + e.message);
+    return { listed: null, source: 'Check failed: ' + e.message };
+  }
 }
 
 
