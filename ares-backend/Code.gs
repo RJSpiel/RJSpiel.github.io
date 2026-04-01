@@ -139,11 +139,13 @@ function runVetting() {
   CacheService.getScriptCache().remove(CONFIG.CACHE_KEY);
 }
 
-// ── VET ALL DRAFT ROWS IN ONE CLICK ───────────────────────────────────────
-// Convenience function: promotes every Draft row to Pending, then runs the
-// full AI + EPA vetting pass. Use this instead of manually changing statuses.
-// Rows that score < AUTO_REJECT_THRESHOLD are automatically set to Rejected.
-// Rows that score ≥ threshold stay Pending for your manual Approve/Reject.
+// ── VET ALL DRAFT ROWS — RESUMABLE ACROSS MULTIPLE RUNS ───────────────────
+// Apps Script has a 6-minute execution limit. This function saves its place
+// in Script Properties when time is running low, then auto-schedules itself
+// to continue in 1 minute. Just run it once — it chains itself until done.
+//
+// Progress is stored under the key 'VET_RESUME_ROW'.
+// Use resetVetProgress() to start over from the beginning.
 function vetAllDraft() {
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(CONFIG.SHEET_NAME);
   if (!sheet) { Logger.log('ERROR: Sheet not found.'); return; }
@@ -154,12 +156,38 @@ function vetAllDraft() {
     return;
   }
 
+  const props      = PropertiesService.getScriptProperties();
+  const START_TIME = Date.now();
+  const MAX_MS     = 5 * 60 * 1000; // stop at 5 min to stay inside the 6-min hard limit
+
+  // Resume from last saved position, or start at row index 1 (0 = header)
+  const resumeFrom = parseInt(props.getProperty('VET_RESUME_ROW') || '1');
+  Logger.log('Starting vetting from data row index ' + resumeFrom + '…');
+
   const data = sheet.getDataRange().getValues();
   let promoted = 0;
   let vetted   = 0;
   let errors   = 0;
+  let lastProcessed = resumeFrom;
 
-  for (let i = 1; i < data.length; i++) {
+  for (let i = resumeFrom; i < data.length; i++) {
+    // ── Time-limit check: save position and schedule continuation ──────────
+    if (Date.now() - START_TIME > MAX_MS) {
+      props.setProperty('VET_RESUME_ROW', String(i));
+      Logger.log('\n⏱ Approaching time limit at row ' + (i + 1) + '. Scheduling continuation in 1 minute…');
+      Logger.log('Vetted this run: ' + vetted + ' | Errors: ' + errors);
+
+      // Delete any stale continuation triggers, then create a new one
+      ScriptApp.getProjectTriggers().forEach(function(t) {
+        if (t.getHandlerFunction() === 'vetAllDraft') ScriptApp.deleteTrigger(t);
+      });
+      ScriptApp.newTrigger('vetAllDraft')
+        .timeBased()
+        .after(60 * 1000) // 1 minute from now
+        .create();
+      return;
+    }
+
     const row = data[i];
     if (!row[COL.ID - 1]) continue;
     const status = String(row[COL.STATUS - 1] || '').trim();
@@ -167,17 +195,18 @@ function vetAllDraft() {
     // Promote Draft → Pending
     if (status === 'Draft') {
       sheet.getRange(i + 1, COL.STATUS).setValue('Pending');
-      row[COL.STATUS - 1] = 'Pending'; // update in-memory so vetRow sees the right value
+      row[COL.STATUS - 1] = 'Pending';
       promoted++;
     }
 
     // Vet anything that is now Pending
     if (row[COL.STATUS - 1] === 'Pending') {
       try {
-        Logger.log('[VET] Row ' + (i + 1) + ': ' + row[COL.ADDRESS - 1]);
+        Logger.log('[VET] Row ' + (i + 1) + '/' + data.length + ': ' + row[COL.ADDRESS - 1]);
         vetRow(sheet, row, i + 1, apiKey);
         vetted++;
-        Utilities.sleep(2000); // respect Anthropic rate limits
+        lastProcessed = i + 1;
+        Utilities.sleep(1200); // reduced from 2000ms — still within Anthropic rate limits
       } catch(err) {
         Logger.log('  ✗ Error on row ' + (i + 1) + ': ' + err.message);
         sheet.getRange(i + 1, COL.AI_FLAGS).setValue('Vetting error: ' + err.message);
@@ -186,12 +215,29 @@ function vetAllDraft() {
     }
   }
 
+  // ── Finished all rows — clean up ──────────────────────────────────────────
+  props.deleteProperty('VET_RESUME_ROW');
+  ScriptApp.getProjectTriggers().forEach(function(t) {
+    if (t.getHandlerFunction() === 'vetAllDraft') ScriptApp.deleteTrigger(t);
+  });
+
   CacheService.getScriptCache().remove(CONFIG.CACHE_KEY);
   Logger.log('\n═══ Vetting Complete ═══');
   Logger.log('Promoted Draft → Pending: ' + promoted);
-  Logger.log('Vetted:  ' + vetted);
-  Logger.log('Errors:  ' + errors);
-  Logger.log('Check the sheet — rows scoring ≥ 35 are Pending (review manually), < 35 are auto-Rejected.');
+  Logger.log('Vetted this run:          ' + vetted);
+  Logger.log('Errors:                   ' + errors);
+  Logger.log('Rows scoring ≥ 35 → Pending (review manually). Rows < 35 → auto-Rejected.');
+}
+
+// ── RESET VET PROGRESS ────────────────────────────────────────────────────
+// Run this if you want vetAllDraft() to start over from row 1,
+// or if a previous run got stuck and left a stale resume pointer.
+function resetVetProgress() {
+  PropertiesService.getScriptProperties().deleteProperty('VET_RESUME_ROW');
+  ScriptApp.getProjectTriggers().forEach(function(t) {
+    if (t.getHandlerFunction() === 'vetAllDraft') ScriptApp.deleteTrigger(t);
+  });
+  Logger.log('Progress reset. Run vetAllDraft() to start from the beginning.');
 }
 
 
