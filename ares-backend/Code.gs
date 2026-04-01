@@ -185,8 +185,15 @@ function vetRow(sheet, row, rowNum, apiKey) {
   sheet.getRange(rowNum, COL.AI_FLAGS).setValue(aiFlags);
   sheet.getRange(rowNum, COL.AI_SUMMARY).setValue(aiSummary);
   sheet.getRange(rowNum, COL.LAST_VETTED).setValue(new Date().toISOString());
-  // Move to Pending → leave as Pending so you can review, then manually set Approved/Rejected
-  // Status stays Pending until you manually approve
+
+  // Auto-reject if AI score is very low — clearly not an automotive property.
+  // Anything ≥ 35 stays Pending for your manual review; you then Approve or Reject.
+  // Adjust the threshold here if needed.
+  const AUTO_REJECT_THRESHOLD = 35;
+  if (aiScore !== '' && parseInt(aiScore) < AUTO_REJECT_THRESHOLD) {
+    sheet.getRange(rowNum, COL.STATUS).setValue('Rejected');
+    Logger.log('  ✗ Auto-rejected (score ' + aiScore + '): ' + sheet.getRange(rowNum, COL.ADDRESS).getValue());
+  }
 }
 
 // ── EPA ECHO API CHECK ────────────────────────────────────────────────────
@@ -224,9 +231,14 @@ Return this exact JSON structure:
 }
 
 Scoring guidance:
-- Penalize heavily: brownfield status, critical grandfathered vacancy risk, deed restrictions blocking automotive use
-- Penalize moderately: EPA flagged, grandfathered high/moderate risk, title flags, no title data
-- Reward: auto-specific zoning, EPA clean, fleet-suitable, active use, M1/M2 zoning, I-5 corridor access`;
+- Score 0–20: Property is clearly NOT automotive — office building, medical/retail/restaurant use, wrong zoning entirely
+- Score 20–35: Generic commercial zoning with no automotive indicators — probably not useful
+- Score 35–60: Commercial/industrial zoning plausibly compatible with automotive use; needs inspection
+- Score 60–80: Good automotive signals — industrial zoning, prior auto use, or fleet-suitable features
+- Score 80–100: Ideal — auto-specific zoning (M1/M2/CG), EPA clean, active automotive use, I-5 access
+- Penalize heavily: brownfield status, critical grandfathered vacancy risk, deed restrictions blocking automotive use, clearly non-automotive current use (office, medical, etc.)
+- Penalize moderately: EPA flagged, grandfathered high/moderate risk, title flags, no title data, generic C1 zoning
+- Reward: auto-specific zoning, EPA clean, fleet-suitable, active automotive use, M1/M2/CG/IL zoning, I-5 corridor access`;
 
   const response = UrlFetchApp.fetch('https://api.anthropic.com/v1/messages', {
     method: 'post',
@@ -515,6 +527,36 @@ const COUNTY_SOURCES = [
  * After running, review Draft rows in the sheet, promote to Pending to trigger
  * AI vetting, then Approve to publish to the website.
  */
+
+// ── AUTOMOTIVE QUALITY FILTERS ────────────────────────────────────────────
+// Applied globally to every county during import.
+//
+// GLOBAL_REJECT_USES: If the parcel's currentUse contains any of these strings,
+// skip it immediately — it's clearly not an automotive property.
+const GLOBAL_REJECT_USES = [
+  'OFFICE', 'OFFICES', 'MEDICAL', 'CLINIC', 'HOSPITAL', 'DENTAL',
+  'RESTAURANT', 'FOOD', 'BAKERY', 'CAFE', 'BAR ', 'TAVERN',
+  'HOTEL', 'MOTEL', 'LODGING', 'APARTMENT', 'CONDO', 'MULTIFAMILY',
+  'CHURCH', 'RELIGIOUS', 'SCHOOL', 'UNIVERSITY', 'DAYCARE', 'LIBRARY',
+  'BANK', 'FINANCIAL', 'INSURANCE',
+  'GROCERY', 'SUPERMARKET', 'PHARMACY',
+  'GOLF', 'MARINA', 'PARK ', 'CEMETERY',
+];
+
+// AUTOMOTIVE_HINTS: At least ONE of these must appear in the parcel's zoning
+// OR currentUse — otherwise the parcel is too generic to be worth importing.
+// This catches plain "C" commercial zoning with an office use description.
+const AUTOMOTIVE_HINTS = [
+  // Zoning codes that explicitly allow automotive / heavy commercial
+  'M1', 'M-1', 'M2', 'M-2', 'M3', 'M-3',
+  'IL', 'IH', 'LI', 'HI', 'IND', 'INDUSTRIAL', 'MANUFACTUR',
+  'CG', 'GC', 'C2', 'C-2', 'C3', 'C-3', 'CB', 'CS', 'CH',
+  'AUTO', 'VEHICLE', 'DEALER', 'SERVICE', 'REPAIR', 'GARAGE',
+  'FLEET', 'TRANSPORT', 'TRUCK', 'TOWING', 'SALVAGE', 'BODY SHOP',
+  'TIRE', 'LUBE', 'CARWASH', 'CAR WASH', 'FUELING', 'GAS STAT',
+  'COMMERCIAL VEHICLE', 'HEAVY COMMERCIAL',
+];
+
 function importFromCountyGIS() {
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(CONFIG.SHEET_NAME);
   if (!sheet) { Logger.log('ERROR: Sheet "' + CONFIG.SHEET_NAME + '" not found.'); return; }
@@ -541,12 +583,32 @@ function importFromCountyGIS() {
           const row = parseGisFeature(feature, source);
           if (!row) return; // unparseable — skip
 
-          // Client-side use-class filter (used when server-side WHERE is unreliable, e.g. Clark WA).
-          // Skips rows whose currentUse contains any of the source's rejectUsePatterns.
+          // Per-source use-class filter (e.g. Clark WA where server-side WHERE is unreliable).
           if (source.rejectUsePatterns && source.rejectUsePatterns.length) {
             const useUpper = (row.currentUse || '').toUpperCase();
             const rejected = source.rejectUsePatterns.some(function(p) { return useUpper.indexOf(p) !== -1; });
             if (rejected) { totalSkipped++; return; }
+          }
+
+          // Global non-automotive reject filter — skip obvious office/retail/medical/etc.
+          const useCheck = (row.currentUse || '').toUpperCase();
+          const globalRejected = GLOBAL_REJECT_USES.some(function(p) { return useCheck.indexOf(p) !== -1; });
+          if (globalRejected) {
+            Logger.log('  [SKIP non-auto] ' + row.address + ' (' + row.currentUse + ')');
+            totalSkipped++;
+            return;
+          }
+
+          // Automotive signal check — at least one automotive/industrial hint must appear
+          // in zoning or currentUse, otherwise the parcel is too generic (e.g. plain "C" + "Office").
+          const zoningCheck = (row.zoning || '').toUpperCase();
+          const hasAutoHint = AUTOMOTIVE_HINTS.some(function(h) {
+            return zoningCheck.indexOf(h) !== -1 || useCheck.indexOf(h) !== -1;
+          });
+          if (!hasAutoHint) {
+            Logger.log('  [SKIP no-hint] ' + row.address + ' (zoning: ' + row.zoning + ', use: ' + row.currentUse + ')');
+            totalSkipped++;
+            return;
           }
 
           // Skip if address is blank or already in sheet
