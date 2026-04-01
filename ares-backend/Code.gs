@@ -220,6 +220,8 @@ function vetAllDraft() {
   Logger.log('Vetted this run:          ' + vetted);
   Logger.log('Errors:                   ' + errors);
   Logger.log('Rows scoring ≥ 35 → Pending (review manually). Rows < 35 → auto-Rejected.');
+  Logger.log('Removing rejected rows…');
+  removeRejected();
 }
 
 // ── RESET VET PROGRESS ────────────────────────────────────────────────────
@@ -237,7 +239,19 @@ function vetRow(sheet, row, rowNum, apiKey) {
   const lng = parseFloat(cell(COL.LNG));
   const address = cell(COL.ADDRESS) + ', ' + cell(COL.CITY) + ', ' + cell(COL.STATE);
 
-  // 1. EPA ECHO check
+  // 1. Listing status check — reject immediately if not found on any listing site
+  const listingResult = checkListingStatus(cell(COL.ADDRESS), cell(COL.CITY), cell(COL.STATE));
+  if (listingResult.listed === false) {
+    // Not found on LoopNet/Crexi/CoStar — not actively for sale, skip remaining checks
+    sheet.getRange(rowNum, COL.STATUS).setValue('Rejected');
+    sheet.getRange(rowNum, COL.AI_FLAGS).setValue('Not listed for sale: ' + listingResult.source);
+    sheet.getRange(rowNum, COL.LISTING_SOURCE).setValue(listingResult.source);
+    sheet.getRange(rowNum, COL.LAST_VETTED).setValue(new Date().toISOString());
+    Logger.log('  ✗ Not listed — rejected: ' + cell(COL.ADDRESS));
+    return; // skip EPA + AI to save quota
+  }
+
+  // 2. EPA ECHO check
   let epaCount = 0;
   let epaFlag = 'clean';
   try {
@@ -246,7 +260,7 @@ function vetRow(sheet, row, rowNum, apiKey) {
     epaFlag = epaResult.flag;
   } catch(e) { /* EPA check failed, leave existing value */ }
 
-  // 2. Build property context for AI scoring
+  // 3. Build property context for AI scoring
   const propContext = {
     id: cell(COL.ID), address, price: cell(COL.PRICE),
     lotSqFt: cell(COL.LOT_SQFT), bldgSqFt: cell(COL.BLDG_SQFT),
@@ -258,9 +272,12 @@ function vetRow(sheet, row, rowNum, apiKey) {
     titleFlags: cell(COL.TITLE_FLAGS), deedRestrictions: cell(COL.DEED_RESTRICTIONS),
     fleetSuitable: cell(COL.FLEET_SUITABLE), description: cell(COL.DESCRIPTION),
     state: cell(COL.STATE), county: cell(COL.COUNTY),
+    // Listing info — confirmed listed properties score higher
+    listingConfirmed: listingResult.listed === true,
+    listingSource: listingResult.source || '',
   };
 
-  // 3. AI score + flags + summary
+  // 4. AI score + flags + summary
   let aiScore = '', aiFlags = '', aiSummary = '';
   if (apiKey) {
     const aiResult = callClaude(propContext, apiKey);
@@ -269,9 +286,10 @@ function vetRow(sheet, row, rowNum, apiKey) {
     aiSummary = aiResult.summary;
   }
 
-  // 4. Write results back to sheet
+  // 5. Write results back to sheet
   sheet.getRange(rowNum, COL.EPA_STATUS).setValue(epaFlag);
   sheet.getRange(rowNum, COL.EPA_FACILITY_COUNT).setValue(epaCount);
+  sheet.getRange(rowNum, COL.LISTING_SOURCE).setValue(listingResult.source || '');
   sheet.getRange(rowNum, COL.AI_SCORE).setValue(aiScore);
   sheet.getRange(rowNum, COL.AI_FLAGS).setValue(aiFlags);
   sheet.getRange(rowNum, COL.AI_SUMMARY).setValue(aiSummary);
@@ -279,11 +297,10 @@ function vetRow(sheet, row, rowNum, apiKey) {
 
   // Auto-reject if AI score is very low — clearly not an automotive property.
   // Anything ≥ 35 stays Pending for your manual review; you then Approve or Reject.
-  // Adjust the threshold here if needed.
   const AUTO_REJECT_THRESHOLD = 35;
   if (aiScore !== '' && parseInt(aiScore) < AUTO_REJECT_THRESHOLD) {
     sheet.getRange(rowNum, COL.STATUS).setValue('Rejected');
-    Logger.log('  ✗ Auto-rejected (score ' + aiScore + '): ' + sheet.getRange(rowNum, COL.ADDRESS).getValue());
+    Logger.log('  ✗ Auto-rejected (score ' + aiScore + '): ' + cell(COL.ADDRESS));
   }
 }
 
@@ -305,6 +322,89 @@ function checkEpa(lat, lng) {
   const flag = count === 0 ? 'clean' : hasViolations ? 'flagged' : 'clean';
   return { count, flag };
 }
+
+// ── LISTING STATUS CHECK ──────────────────────────────────────────────────
+// Searches LoopNet, Crexi, and CoStar for the property address using the
+// Google Custom Search API (free — 100 queries/day on the free tier).
+//
+// SETUP (one-time):
+//   1. Go to https://console.cloud.google.com → Enable "Custom Search API"
+//   2. Create an API key → copy it
+//   3. Go to https://programmablesearchengine.google.com → New search engine
+//      → Search the entire web → copy the Search engine ID (cx)
+//   4. In Apps Script → Project Settings → Script Properties, add:
+//        GOOGLE_SEARCH_API_KEY  →  your API key
+//        GOOGLE_SEARCH_CX       →  your Search engine ID
+//
+// Returns: { listed: true/false/null, source: 'url or reason' }
+// null means the API keys aren't configured — property is left as-is.
+function checkListingStatus(address, city, state) {
+  const props  = PropertiesService.getScriptProperties();
+  const apiKey = props.getProperty('GOOGLE_SEARCH_API_KEY');
+  const cx     = props.getProperty('GOOGLE_SEARCH_CX');
+
+  if (!apiKey || !cx) {
+    return { listed: null, source: 'Google Search API not configured' };
+  }
+
+  // Search for the address on the major commercial listing platforms
+  const query = '"' + address + '" "' + city + '" "' + state + '" ' +
+    '(site:loopnet.com OR site:crexi.com OR site:costar.com OR ' +
+    'site:commercialcafe.com OR site:cityfeet.com)';
+
+  const url = 'https://www.googleapis.com/customsearch/v1' +
+    '?key=' + encodeURIComponent(apiKey) +
+    '&cx='  + encodeURIComponent(cx) +
+    '&num=3' +
+    '&q='   + encodeURIComponent(query);
+
+  try {
+    const response = UrlFetchApp.fetch(url, { muteHttpExceptions: true });
+    const data = JSON.parse(response.getContentText());
+
+    if (data.error) {
+      Logger.log('  ⚠ Listing API error: ' + data.error.message);
+      return { listed: null, source: 'Search API error: ' + data.error.message };
+    }
+
+    if (data.items && data.items.length > 0) {
+      const topResult = data.items[0];
+      Logger.log('  ✔ Listed: ' + topResult.link);
+      return { listed: true, source: topResult.link };
+    }
+
+    Logger.log('  ✘ Not found on listing sites');
+    return { listed: false, source: 'Not found on LoopNet/Crexi/CoStar' };
+
+  } catch(e) {
+    Logger.log('  ⚠ Listing check failed: ' + e.message);
+    return { listed: null, source: 'Check failed: ' + e.message };
+  }
+}
+
+
+// ── REMOVE REJECTED ROWS ──────────────────────────────────────────────────
+// Deletes every row in the sheet where STATUS = 'Rejected'.
+// Iterates bottom-up so row index shifting doesn't skip rows.
+// Run this manually after a vetting pass, or call it at the end of vetAllDraft().
+function removeRejected() {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(CONFIG.SHEET_NAME);
+  if (!sheet) { Logger.log('ERROR: Sheet not found.'); return; }
+
+  const data = sheet.getDataRange().getValues();
+  let removed = 0;
+
+  for (let i = data.length - 1; i >= 1; i--) {
+    if (String(data[i][COL.STATUS - 1]).trim() === 'Rejected') {
+      sheet.deleteRow(i + 1);
+      removed++;
+    }
+  }
+
+  CacheService.getScriptCache().remove(CONFIG.CACHE_KEY);
+  Logger.log('Removed ' + removed + ' rejected row(s). Sheet now has ' + (sheet.getLastRow() - 1) + ' properties.');
+}
+
 
 // ── CLAUDE AI SCORING ─────────────────────────────────────────────────────
 function callClaude(prop, apiKey) {
@@ -329,7 +429,8 @@ Scoring guidance:
 - Score 80–100: Ideal — auto-specific zoning (M1/M2/CG), EPA clean, active automotive use, I-5 access
 - Penalize heavily: brownfield status, critical grandfathered vacancy risk, deed restrictions blocking automotive use, clearly non-automotive current use (office, medical, etc.)
 - Penalize moderately: EPA flagged, grandfathered high/moderate risk, title flags, no title data, generic C1 zoning
-- Reward: auto-specific zoning, EPA clean, fleet-suitable, active automotive use, M1/M2/CG/IL zoning, I-5 corridor access`;
+- Reward: confirmed listing on LoopNet/Crexi/CoStar (listingConfirmed=true), auto-specific zoning, EPA clean, fleet-suitable, active automotive use, M1/M2/CG/IL zoning, I-5 corridor access
+- Note: if listingConfirmed is true, mention the listing source in your summary so the buyer knows where to find it`;
 
   const response = UrlFetchApp.fetch('https://api.anthropic.com/v1/messages', {
     method: 'post',
