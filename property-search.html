@@ -421,13 +421,13 @@
        (map + results) without disrupting layout */
     .ps-detail {
       position: fixed;
-      top: 72px;          /* below nav */
+      top: 88px;          /* below nav (matches .ps-app margin-top) */
       right: 0;
       bottom: 0;
       width: 480px;
       background: var(--navy);
       border-left: 1px solid var(--border);
-      z-index: 1000;      /* above Leaflet (400) and results */
+      z-index: 1000;      /* above nav (100) and Leaflet (400) — works because panel is in root stacking context */
       transform: translateX(100%);
       transition: transform 0.3s ease;
       overflow-y: auto;
@@ -823,16 +823,17 @@
         </div>
       </div>
 
-      <!-- DETAIL PANEL (slides in from right) -->
-      <div class="ps-detail" id="ps-detail">
-        <div class="ps-detail-header">
-          <button class="ps-detail-back" id="ps-detail-close">&#8592; Back to Results</button>
-          <button class="ps-detail-export" id="ps-detail-export">&#128196; Export PDF</button>
-        </div>
-        <div class="ps-detail-body" id="ps-detail-body">
-          <!-- Content injected by JS -->
-        </div>
-      </div>
+    </div>
+  </div>
+
+  <!-- DETAIL PANEL (slides in from right, outside .ps-app to escape its stacking context) -->
+  <div class="ps-detail" id="ps-detail">
+    <div class="ps-detail-header">
+      <button class="ps-detail-back" id="ps-detail-close">&#8592; Back to Results</button>
+      <button class="ps-detail-export" id="ps-detail-export">&#128196; Export PDF</button>
+    </div>
+    <div class="ps-detail-body" id="ps-detail-body">
+      <!-- Content injected by JS -->
     </div>
   </div>
 
