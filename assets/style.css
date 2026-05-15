@@ -548,15 +548,56 @@ footer .footer-links a:hover { color: var(--red); }
   color: var(--red);
 }
 
-/* ── RESPONSIVE ── */
+/* ── HAMBURGER OPEN STATE (X animation) ── */
+.hamburger.open span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+.hamburger.open span:nth-child(2) { opacity: 0; transform: scaleX(0); }
+.hamburger.open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+
+/* ── RESPONSIVE — TABLET / SMALL DESKTOP ── */
 @media (max-width: 900px) {
   nav { padding: 0 24px; }
-  nav ul { display: none; flex-direction: column; position: absolute; top: 88px; left: 0; right: 0; background: var(--navy2); padding: 24px; gap: 20px; border-bottom: 1px solid var(--border); }
+  nav ul {
+    display: none;
+    flex-direction: column;
+    position: absolute;
+    top: 88px; left: 0; right: 0;
+    background: var(--navy2);
+    padding: 24px;
+    gap: 20px;
+    border-bottom: 1px solid var(--border);
+    z-index: 200;
+  }
   nav ul.open { display: flex; }
   .hamburger { display: flex; }
-  .hero, section, .page-hero { padding-left: 24px; padding-right: 24px; }
+  .hero { padding-left: 24px; padding-right: 24px; }
+  section { padding: 80px 24px 60px; }
+  .page-hero { padding-top: 140px; padding-left: 24px; padding-right: 24px; }
   .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
   .stat-band { flex-direction: column; gap: 36px; padding: 36px 24px; }
+  .journey-step { flex-direction: column; gap: 16px; padding: 24px; }
+  .step-number { font-size: 2rem; min-width: auto; }
   footer { padding: 36px 24px; }
   footer .footer-links { flex-wrap: wrap; gap: 16px; }
+  .hero-cta-group { flex-direction: column; align-items: flex-start; }
+  .btn-primary, .btn-secondary { width: 100%; text-align: center; }
+}
+
+/* ── RESPONSIVE — MOBILE ── */
+@media (max-width: 600px) {
+  nav { height: 72px; }
+  nav .nav-logo img { height: 60px; }
+  nav ul { top: 72px; }
+  .hero { padding-left: 16px; padding-right: 16px; padding-top: 72px; }
+  section { padding: 60px 16px 40px; }
+  .page-hero { padding-top: 110px; padding-left: 16px; padding-right: 16px; padding-bottom: 40px; }
+  .card { padding: 24px 20px; }
+  .stat-band { padding: 28px 16px; gap: 28px; }
+  .stat-num { font-size: 2.8rem; }
+  footer { padding: 28px 16px; }
+  footer img { height: 64px; }
+  footer .footer-links { gap: 12px; }
+  .journey-step { padding: 20px 16px; }
+  h2 { font-size: clamp(2rem, 8vw, 3rem); }
+  .section-lead { font-size: 0.95rem; margin-bottom: 40px; }
+  .btn-primary, .btn-secondary { padding: 13px 24px; font-size: 0.85rem; }
 }

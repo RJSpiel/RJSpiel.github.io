@@ -5,7 +5,17 @@ if (typeof window === 'undefined' || typeof document === 'undefined') { throw ne
 const hamburger = document.querySelector('.hamburger');
 const navMenu = document.querySelector('nav ul');
 if (hamburger && navMenu) {
-  hamburger.addEventListener('click', () => navMenu.classList.toggle('open'));
+  hamburger.addEventListener('click', () => {
+    navMenu.classList.toggle('open');
+    hamburger.classList.toggle('open');
+  });
+  // Close nav when any link is tapped
+  navMenu.querySelectorAll('a').forEach(a => {
+    a.addEventListener('click', () => {
+      navMenu.classList.remove('open');
+      hamburger.classList.remove('open');
+    });
+  });
 }
 
 // Scroll-triggered fade-ins
