@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+Disallow: /properties.json
+
+Sitemap: https://arescommercial.org/sitemap.xml
