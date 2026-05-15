@@ -754,10 +754,10 @@
         &#9881; Filters <span class="count" id="ps-filter-count" style="display:none;">0</span>
       </button>
       <select id="ps-sort">
+        <option value="id-desc">Newest Listed</option>
         <option value="price-asc">Price: Low–High</option>
         <option value="price-desc">Price: High–Low</option>
-        <option value="lot-desc">Lot Size: Largest</option>
-        <option value="risk-desc">GF Risk: Highest</option>
+        <option value="sf-desc">Space: Largest</option>
       </select>
       <span class="ps-results-count" id="ps-results-count">0 properties</span>
       <button class="ps-settings-btn" id="ps-settings-toggle" title="AI Settings">&#9881;</button>
@@ -766,97 +766,33 @@
       <div class="ps-filter-panel" id="ps-filter-panel">
         <div class="ps-filter-grid">
 
+          <!-- Listing Type -->
+          <div class="ps-filter-group">
+            <h4>Listing Type</h4>
+            <label><input type="checkbox" name="ltype" value="sale" checked /> For Sale</label>
+            <label><input type="checkbox" name="ltype" value="lease" checked /> For Lease</label>
+          </div>
+
           <!-- Property Type -->
           <div class="ps-filter-group">
             <h4>Property Type</h4>
-            <label><input type="checkbox" name="ptype" value="retail-auto" checked /> Retail Automotive</label>
-            <label><input type="checkbox" name="ptype" value="fleet" checked /> Fleet / Government</label>
-            <label><input type="checkbox" name="ptype" value="commercial-vehicle" checked /> Commercial Vehicle</label>
-            <label><input type="checkbox" name="ptype" value="industrial" checked /> General Industrial</label>
-          </div>
-
-          <!-- Zoning -->
-          <div class="ps-filter-group">
-            <h4>Zoning</h4>
-            <label><input type="checkbox" name="zoning" value="M1" checked /> M1 — Light Industrial</label>
-            <label><input type="checkbox" name="zoning" value="M2" checked /> M2 — Heavy Industrial</label>
-            <label><input type="checkbox" name="zoning" value="C2" checked /> C2 — Commercial</label>
-            <label><input type="checkbox" name="zoning" value="MU" checked /> Mixed Use</label>
-            <label><input type="checkbox" name="zoning" value="AUTO" checked /> Auto-Specific</label>
-          </div>
-
-          <!-- EPA Status -->
-          <div class="ps-filter-group">
-            <h4>EPA Status</h4>
-            <label><input type="checkbox" name="epa" value="clean" checked /> &#9989; Clean</label>
-            <label><input type="checkbox" name="epa" value="flagged" checked /> &#9888; Flagged</label>
-            <label><input type="checkbox" name="epa" value="brownfield" checked /> &#9940; Brownfield</label>
-          </div>
-
-          <!-- Grandfathered -->
-          <div class="ps-filter-group">
-            <h4>Grandfathered Status</h4>
-            <label><input type="checkbox" name="gf" value="active" checked /> Active (Protected)</label>
-            <label><input type="checkbox" name="gf" value="at-risk" checked /> At Risk</label>
-            <label><input type="checkbox" name="gf" value="none" checked /> Not Grandfathered</label>
-          </div>
-
-          <!-- County -->
-          <div class="ps-filter-group">
-            <h4>County — Washington</h4>
-            <label><input type="checkbox" name="county" value="Thurston" checked /> Thurston</label>
-            <label><input type="checkbox" name="county" value="Pierce" checked /> Pierce</label>
-            <label><input type="checkbox" name="county" value="King" checked /> King</label>
-            <label><input type="checkbox" name="county" value="Snohomish" checked /> Snohomish</label>
-            <label><input type="checkbox" name="county" value="Clark" checked /> Clark</label>
-            <label><input type="checkbox" name="county" value="Kitsap" checked /> Kitsap</label>
-            <label><input type="checkbox" name="county" value="Whatcom" checked /> Whatcom</label>
-            <h4 style="margin-top:10px;">County — Oregon</h4>
-            <label><input type="checkbox" name="county" value="Multnomah" checked /> Multnomah</label>
-            <label><input type="checkbox" name="county" value="Washington" checked /> Washington</label>
-            <label><input type="checkbox" name="county" value="Clackamas" checked /> Clackamas</label>
-            <label><input type="checkbox" name="county" value="Marion" checked /> Marion</label>
-            <label><input type="checkbox" name="county" value="Lane" checked /> Lane</label>
-            <label><input type="checkbox" name="county" value="Jackson" checked /> Jackson</label>
-            <h4 style="margin-top:10px;">County — California</h4>
-            <label><input type="checkbox" name="county" value="Siskiyou" checked /> Siskiyou</label>
-            <label><input type="checkbox" name="county" value="Shasta" checked /> Shasta</label>
-            <label><input type="checkbox" name="county" value="Sacramento" checked /> Sacramento</label>
-            <label><input type="checkbox" name="county" value="San Joaquin" checked /> San Joaquin</label>
-            <label><input type="checkbox" name="county" value="Fresno" checked /> Fresno</label>
-            <label><input type="checkbox" name="county" value="Los Angeles" checked /> Los Angeles</label>
-            <label><input type="checkbox" name="county" value="San Diego" checked /> San Diego</label>
-          </div>
-
-          <!-- Vacancy -->
-          <div class="ps-filter-group">
-            <h4>Vacancy</h4>
-            <label><input type="checkbox" name="vacancy" value="occupied" checked /> Occupied</label>
-            <label><input type="checkbox" name="vacancy" value="vacant" checked /> Vacant</label>
-          </div>
-
-          <!-- Deed Restrictions -->
-          <div class="ps-filter-group">
-            <h4>Title / Deed</h4>
-            <label><input type="checkbox" id="filter-deed-only" /> Show flagged only</label>
-            <label><input type="checkbox" id="filter-title-avail" /> Has title data</label>
+            <label><input type="checkbox" name="ptype" value="Industrial" checked /> Industrial</label>
+            <label><input type="checkbox" name="ptype" value="Retail" checked /> Retail</label>
+            <label><input type="checkbox" name="ptype" value="Office" checked /> Office</label>
+            <label><input type="checkbox" name="ptype" value="Land" checked /> Land</label>
+            <label><input type="checkbox" name="ptype" value="Specialty" checked /> Specialty</label>
+            <label><input type="checkbox" name="ptype" value="High Tech-Flex" checked /> High Tech-Flex</label>
           </div>
 
           <!-- Ranges -->
           <div class="ps-filter-group">
-            <h4>Lot Size (sq ft)</h4>
-            <div class="ps-range-row">
-              <input type="number" class="ps-range-input" id="lot-min" placeholder="Min" />
-              <span style="color:var(--dim);">—</span>
-              <input type="number" class="ps-range-input" id="lot-max" placeholder="Max" />
-            </div>
-            <h4 style="margin-top:14px;">Price ($)</h4>
+            <h4>Sale Price ($)</h4>
             <div class="ps-range-row">
               <input type="number" class="ps-range-input" id="price-min" placeholder="Min" />
               <span style="color:var(--dim);">—</span>
               <input type="number" class="ps-range-input" id="price-max" placeholder="Max" />
             </div>
-            <h4 style="margin-top:14px;">Building (sq ft)</h4>
+            <h4 style="margin-top:14px;">Building / Space (sq ft)</h4>
             <div class="ps-range-row">
               <input type="number" class="ps-range-input" id="bldg-min" placeholder="Min" />
               <span style="color:var(--dim);">—</span>
@@ -961,46 +897,102 @@
 
     /* ── CONFIGURATION ── */
     const CONFIG = {
-      mapCenter: [44.5, -122.8],   // I-5 corridor center (WA → OR → CA)
-      mapZoom: 6,
+      mapCenter: [47.5, -122.0],   // Western Washington
+      mapZoom: 8,
       epaEchoBase: 'https://echodata.epa.gov/echo/echo_rest_services.get_facilities',
       epaRadiusMiles: 2,
       anthropicModel: 'claude-sonnet-4-20250514',
-      grandfatherVacancyWarningMonths: 6,
-      grandfatherVacancyCriticalMonths: 18
+      geocodeCache: 'ares_geo_cache',
+      nominatimDelay: 1100   // ms between geocode requests (Nominatim policy: 1 req/sec)
     };
 
-    /* ── LIVE PROPERTY FEED ──
-   Data is served from a Google Apps Script Web App (ARES backend).
-   Set FEED_URL below to your deployed Apps Script URL.
-   Falls back to empty array if feed is unreachable. */
+    /* ── PROPERTY DATA SOURCE ──
+       Data is served from properties.json, hosted alongside this file.
+       To update listings: re-export properties.json and replace the file.    */
 
-    // ⚠️  PASTE YOUR APPS SCRIPT WEB APP URL HERE after deploying the backend:
-    const FEED_URL = 'https://script.google.com/macros/s/AKfycbyWU0Iyr_Vdy-rc1Ib-pRA9WOEETdiE1k_v89BQXNsyY4qfAcZSPJEyGU07QI4ngLXd/exec';
-
-    let PROPERTIES = [];   // populated by loadFeed() on init
+    let PROPERTIES = [];
     let FEED_LOADED = false;
+    let GEO_CACHE = {};
 
     function loadFeed(callback) {
-      if (!FEED_URL || FEED_URL === 'PASTE_YOUR_APPS_SCRIPT_URL_HERE') {
-        showFeedStatus('No feed URL configured. Add your Apps Script URL to property-search.html.', true);
-        callback([]);
-        return;
-      }
       showFeedStatus('Loading properties…', false);
-      fetch(FEED_URL)
-        .then(function(r) { return r.json(); })
+      fetch('./properties.json')
+        .then(function(r) {
+          if (!r.ok) throw new Error('HTTP ' + r.status);
+          return r.json();
+        })
         .then(function(data) {
-          PROPERTIES = data.properties || [];
           FEED_LOADED = true;
           hideFeedStatus();
-          callback(PROPERTIES);
+          callback(data.properties || []);
         })
         .catch(function(err) {
           console.error('Feed load error:', err);
-          showFeedStatus('Could not load property feed. Check your feed URL and deployment.', true);
+          showFeedStatus('Could not load properties.json. Make sure the file is in the same folder as property-search.html.', true);
           callback([]);
         });
+    }
+
+    /* ── GEOCODING (Nominatim / OpenStreetMap — free, no API key) ── */
+    function loadGeoCache() {
+      try { GEO_CACHE = JSON.parse(localStorage.getItem(CONFIG.geocodeCache) || '{}'); }
+      catch(e) { GEO_CACHE = {}; }
+    }
+
+    function saveGeoCache() {
+      try { localStorage.setItem(CONFIG.geocodeCache, JSON.stringify(GEO_CACHE)); }
+      catch(e) {}
+    }
+
+    function geocodeOne(p, callback) {
+      var cacheKey = String(p.listingId || p.id);
+      if (GEO_CACHE[cacheKey]) {
+        p.lat = GEO_CACHE[cacheKey].lat;
+        p.lng = GEO_CACHE[cacheKey].lng;
+        callback();
+        return;
+      }
+      var q = encodeURIComponent(p.fullAddress);
+      fetch('https://nominatim.openstreetmap.org/search?q=' + q + '&format=json&limit=1&countrycodes=us', {
+        headers: { 'Accept-Language': 'en', 'User-Agent': 'ARES-PropertySearch/1.0' }
+      })
+        .then(function(r) { return r.json(); })
+        .then(function(results) {
+          if (results && results[0]) {
+            p.lat = parseFloat(results[0].lat);
+            p.lng = parseFloat(results[0].lon);
+            GEO_CACHE[cacheKey] = { lat: p.lat, lng: p.lng };
+            saveGeoCache();
+          }
+          callback();
+        })
+        .catch(function() { callback(); });
+    }
+
+    function geocodeAll(properties, onEachGeocoded) {
+      loadGeoCache();
+      /* Apply cached coords immediately */
+      properties.forEach(function(p) {
+        var key = String(p.listingId || p.id);
+        if (GEO_CACHE[key]) {
+          p.lat = GEO_CACHE[key].lat;
+          p.lng = GEO_CACHE[key].lng;
+        }
+      });
+      onEachGeocoded(); /* Initial render with cached data */
+
+      /* Then geocode anything not yet cached, rate-limited to 1/sec */
+      var uncached = properties.filter(function(p) { return !p.lat; });
+      if (!uncached.length) return;
+      var i = 0;
+      function next() {
+        if (i >= uncached.length) return;
+        geocodeOne(uncached[i++], function() {
+          onEachGeocoded();
+          setTimeout(next, CONFIG.nominatimDelay);
+        });
+      }
+      next();
     }
 
     function showFeedStatus(msg, isError) {
@@ -1017,29 +1009,15 @@
       if (el) el.style.display = 'none';
     }
 
-    function getPortalUrl(p) {
-      switch (p.county) {
-        case 'Thurston':  return 'https://map.co.thurston.wa.us/parcelinfo/';
-        case 'Pierce':    return 'https://atip.piercecountywa.gov/app/v2/parcelSearch/search';
-        case 'King':      return 'https://blue.kingcounty.com/Assessor/eRealProperty/default.aspx';
-        case 'Snohomish': return 'https://www.snoco.org/proptax/';
-        case 'Clark':     return 'https://gis.clark.wa.gov/gishome/property/';
-        case 'Kitsap':    return 'https://psearch.kitsapgov.com/pdetails/default.aspx';
-        case 'Whatcom':   return 'https://property.whatcomcounty.us/propertyaccess/?cid=0';
-        case 'Multnomah': return 'https://multcoproptax.com/Property-Search';
-        case 'Washington': return 'https://www.co.washington.or.us/AssessmentTaxation/PropertySearch/';
-        case 'Clackamas': return 'https://www.clackamas.us/at/propertysearch.html';
-        case 'Marion':    return 'https://www.co.marion.or.us/AE/Pages/PropertySearch.aspx';
-        case 'Lane':      return 'https://www.lanecounty.org/government/county_departments/assessment_taxation/property_search';
-        case 'Jackson':   return 'https://www.jacksoncountyor.gov/Assessor/Property-Search';
-        case 'Siskiyou':    return 'https://siskiyouassessor.com/';
-        case 'Shasta':      return 'https://www.co.shasta.ca.us/departments/assessor/property-search';
-        case 'Sacramento':  return 'https://assessor.saccounty.gov/PropertySearch/';
-        case 'San Joaquin': return 'https://sjcasr.info/';
-        case 'Fresno':      return 'https://assessor.fresnocountyca.gov/property-search';
-        case 'Los Angeles': return 'https://assessor.lacounty.gov/';
-        case 'San Diego':   return 'https://arcc.sdcounty.ca.gov/Pages/Assessor-Recorder-County-Clerk.aspx';
-        default: return '#';
+    /* ── PRICE DISPLAY ── */
+    function displayPrice(p) {
+      if (p.listingType === 'sale') {
+        if (!p.price) return 'Price TBD';
+        if (p.price >= 1000000) return '$' + (p.price / 1000000).toFixed(2).replace(/\.?0+$/, '') + 'M';
+        return '$' + Math.round(p.price / 1000) + 'K';
+      } else {
+        if (!p.priceRaw || p.priceRaw === 'None' || p.priceRaw === 'null') return 'Call for Rate';
+        return p.priceRaw;
       }
     }
 
@@ -1054,36 +1032,11 @@
     };
 
     /* ── UTILITY FUNCTIONS ── */
-    function formatPrice(n) {
-      if (n >= 1000000) return '$' + (n / 1000000).toFixed(1) + 'M';
-      return '$' + (n / 1000).toFixed(0) + 'K';
-    }
     function formatSqFt(n) {
       if (!n) return 'N/A';
       return n.toLocaleString() + ' sf';
     }
     function acresFromSqFt(n) { return (n / 43560).toFixed(2); }
-    function monthsSince(dateStr) {
-      if (!dateStr) return null;
-      const d = new Date(dateStr);
-      const now = new Date();
-      return Math.round((now - d) / (1000 * 60 * 60 * 24 * 30.44));
-    }
-    function getGrandfatherRisk(p) {
-      if (!p.isGrandfathered) return 'none';
-      if (!p.isVacant) return 'low';
-      const months = monthsSince(p.vacantSince);
-      if (months === null) return 'low';
-      if (months >= CONFIG.grandfatherVacancyCriticalMonths) return 'critical';
-      if (months >= 12) return 'high';
-      if (months >= CONFIG.grandfatherVacancyWarningMonths) return 'moderate';
-      return 'low';
-    }
-    function getGfFilterCategory(p) {
-      if (!p.isGrandfathered) return 'none';
-      const risk = getGrandfatherRisk(p);
-      return (risk === 'low') ? 'active' : 'at-risk';
-    }
 
     /* ── MAP INITIALIZATION ── */
     function initMap() {
@@ -1104,31 +1057,17 @@
       STATE.markerLayer = L.layerGroup().addTo(STATE.map);
     }
 
-    /* Create custom colored marker icon */
-    function createMarkerIcon(epaStatus, fleetSuitable) {
-      let cls = 'ps-marker-clean';
-      let emoji = '&#9679;';
-      if (fleetSuitable) { cls = 'ps-marker-fleet'; emoji = '&#9733;'; }
-      if (epaStatus === 'flagged') { cls = 'ps-marker-flagged'; emoji = '&#9888;'; }
-      if (epaStatus === 'brownfield') { cls = 'ps-marker-brownfield'; emoji = '&#9940;'; }
-      return L.divIcon({
-        className: '',
-        html: '<div class="ps-marker ' + cls + '"><span class="ps-marker-inner">' + emoji + '</span></div>',
-        iconSize: [28, 28],
-        iconAnchor: [14, 28],
-        popupAnchor: [0, -30]
-      });
-    }
-
     /* ── BADGE HTML GENERATORS ── */
     function epaBadge(status) {
-      const map = {
-        clean: '<span class="ps-badge ps-badge-clean">&#9989; Clean</span>',
-        flagged: '<span class="ps-badge ps-badge-flagged">&#9888; EPA Flagged</span>',
-        brownfield: '<span class="ps-badge ps-badge-brownfield">&#9940; Brownfield</span>'
+      var map = {
+        clean:      '<span class="ps-badge ps-badge-clean">&#9989; EPA Clean</span>',
+        flagged:    '<span class="ps-badge ps-badge-flagged">&#9888; EPA Flagged</span>',
+        brownfield: '<span class="ps-badge ps-badge-brownfield">&#9940; Brownfield</span>',
+        unknown:    ''
       };
       return map[status] || '';
     }
+
     function epaAssessmentHtml(p) {
       var style = 'font-size:0.82rem; line-height:1.65; color:var(--steel); margin-bottom:6px;';
       if (p.epaStatus === 'clean') {
@@ -1136,50 +1075,43 @@
       } else if (p.epaStatus === 'flagged') {
         return '<p style="' + style + '">Environmental concern flagged for this parcel. One or more database entries indicate potential contamination risk — possibly linked to prior industrial use, an underground storage tank (UST), or hydraulic fluid leaching from previous automotive operations.</p>' +
                '<p style="' + style + ' color:var(--red);">A Phase I Environmental Site Assessment is required before acquisition. Depending on findings, a Phase II ESA with soil sampling may be necessary.</p>';
-      } else {
+      } else if (p.epaStatus === 'brownfield') {
         return '<p style="' + style + '">Confirmed contamination on record. This site is designated a brownfield — contamination has been identified through prior environmental survey.</p>' +
                '<p style="' + style + ' color:var(--red);">Cleanup and remediation will be required before automotive use can proceed. Phase II ESA data and any existing Voluntary Cleanup Program (VCP) records should be reviewed carefully before making an offer.</p>';
+      } else {
+        return '<p style="' + style + '">Environmental status has not been pre-assessed for this listing. The EPA ECHO database is being queried live using the property\'s coordinates — results appear below.</p>';
       }
     }
-    function gfBadge(p) {
-      if (!p.isGrandfathered) return '';
-      const risk = getGrandfatherRisk(p);
-      if (risk === 'low') return '<span class="ps-badge ps-badge-gf">&#128274; Grandfathered</span>';
-      if (risk === 'moderate') return '<span class="ps-badge ps-badge-gf-risk">&#9888; GF At Risk</span>';
-      if (risk === 'high') return '<span class="ps-badge ps-badge-gf-risk">&#128308; GF High Risk</span>';
-      return '<span class="ps-badge ps-badge-gf-crit">&#128680; GF Critical</span>';
+
+    function listingTypeBadge(p) {
+      if (p.listingType === 'sale') {
+        return '<span class="ps-badge" style="background:rgba(200,16,46,0.18); color:#f87171; border:1px solid rgba(200,16,46,0.35);">FOR SALE</span>';
+      }
+      return '<span class="ps-badge" style="background:rgba(34,197,94,0.12); color:#4ade80; border:1px solid rgba(34,197,94,0.3);">FOR LEASE</span>';
     }
-    function fleetBadge(p) {
-      return p.fleetSuitable ? '<span class="ps-badge ps-badge-fleet">&#9733; Fleet Ready</span>' : '';
-    }
-    function titleBadge(p) {
-      return (p.titleFlags.length || p.deedRestrictions.length) ? '<span class="ps-badge ps-badge-title">&#128203; Title Flags</span>' : '';
-    }
-    function vacantBadge(p) {
-      return p.isVacant ? '<span class="ps-badge ps-badge-vacant">Vacant</span>' : '';
-    }
-    function zoningBadge(p) {
-      return '<span class="ps-badge ps-badge-zoning">' + p.zoning + '</span>';
-    }
-    function allBadges(p) {
-      return zoningBadge(p) + epaBadge(p.epaStatus) + gfBadge(p) + fleetBadge(p) + titleBadge(p) + vacantBadge(p);
+
+    function typeBadges(p) {
+      return p.propertyTypes.map(function(t) {
+        return '<span class="ps-badge ps-badge-zoning">' + t + '</span>';
+      }).join('');
     }
 
     /* ── RENDER PROPERTY CARD (results list) ── */
     function renderCard(p) {
-      return '<div class="ps-card" data-id="' + p.id + '" onclick="document.dispatchEvent(new CustomEvent(\'ps-select\',{detail:\'' + p.id + '\'}))">' +
-        '<div class="ps-card-top">' +
-          '<span class="ps-card-id">' + p.id + '</span>' +
-          '<span class="ps-card-price">' + formatPrice(p.price) + '</span>' +
-        '</div>' +
-        '<div class="ps-card-address">' + p.address + '</div>' +
-        '<div class="ps-card-city">' + p.city + ', ' + p.county + ' County, WA ' + p.zip + '</div>' +
-        '<div class="ps-card-stats">' +
-          '<span class="ps-card-stat"><strong>' + formatSqFt(p.lotSqFt) + '</strong> lot</span>' +
-          '<span class="ps-card-stat"><strong>' + formatSqFt(p.bldgSqFt) + '</strong> bldg</span>' +
-          '<span class="ps-card-stat"><strong>' + p.zoningLabel + '</strong></span>' +
-        '</div>' +
-        '<div class="ps-card-badges">' + allBadges(p) + '</div>' +
+      var sfLine = '';
+      if (p.buildingSF) sfLine += '<span class="ps-card-stat"><strong>' + p.buildingSF.toLocaleString() + ' sf</strong> ' + (p.listingType === 'lease' ? 'avail' : 'bldg') + '</span>';
+      if (p.landSF)     sfLine += '<span class="ps-card-stat"><strong>' + p.landSF.toLocaleString() + ' sf</strong> land</span>';
+
+      return '<div class="ps-card" data-id="' + p.id + '" onclick="document.dispatchEvent(new CustomEvent(\'ps-select\',{detail:\'' + p.id + '\'}))">'+
+        '<div class="ps-card-top">'+
+          '<span class="ps-card-id">#' + (p.listingId || '') + '</span>'+
+          '<span class="ps-card-price">' + displayPrice(p) + '</span>'+
+        '</div>'+
+        '<div class="ps-card-address">' + p.name + '</div>'+
+        '<div class="ps-card-city">' + p.streetAddress + '</div>'+
+        (sfLine ? '<div class="ps-card-stats">' + sfLine + '</div>' : '') +
+        '<div class="ps-card-badges">' + listingTypeBadge(p) + typeBadges(p) + epaBadge(p.epaStatus) + '</div>'+
+        (p.broker ? '<div style="font-size:0.72rem; color:var(--dim); margin-top:6px; padding-top:4px; border-top:1px solid var(--border);">' + p.broker + '</div>' : '')+
       '</div>';
     }
 
@@ -1188,11 +1120,18 @@
       STATE.markerLayer.clearLayers();
       STATE.markers = {};
       STATE.filteredProperties.forEach(function(p) {
-        var icon = createMarkerIcon(p.epaStatus, p.fleetSuitable);
+        if (!p.lat || !p.lng) return;
+        var color  = p.listingType === 'sale' ? '#ef4444' : '#4ade80';
+        var symbol = p.listingType === 'sale' ? '$' : '&#x2302;';
+        var icon = L.divIcon({
+          className: '',
+          html: '<div class="ps-marker" style="background:' + color + '"><span class="ps-marker-inner">' + symbol + '</span></div>',
+          iconSize: [28, 28], iconAnchor: [14, 28], popupAnchor: [0, -30]
+        });
         var marker = L.marker([p.lat, p.lng], { icon: icon });
-        var popup = '<div class="ps-popup-title">' + p.address + '</div>' +
-          '<div class="ps-popup-sub">' + p.city + ', ' + p.county + ' Co. — ' + formatPrice(p.price) + '</div>' +
-          '<div class="ps-popup-badges">' + allBadges(p) + '</div>' +
+        var popup = '<div class="ps-popup-title">' + p.name + '</div>' +
+          '<div class="ps-popup-sub">' + p.streetAddress + ' — ' + displayPrice(p) + '</div>' +
+          '<div class="ps-popup-badges">' + listingTypeBadge(p) + typeBadges(p) + '</div>' +
           '<button class="ps-popup-btn" onclick="document.dispatchEvent(new CustomEvent(\'ps-select\',{detail:\'' + p.id + '\'}))">View Details</button>';
         marker.bindPopup(popup, { maxWidth: 280 });
         marker.on('click', function() {
@@ -1233,61 +1172,44 @@
     }
 
     function applyFilters() {
-      var search = document.getElementById('ps-search-input').value.toLowerCase().trim();
-      var ptypes = getCheckedValues('ptype');
-      var zonings = getCheckedValues('zoning');
-      var epas = getCheckedValues('epa');
-      var gfs = getCheckedValues('gf');
-      var counties = getCheckedValues('county');
-      var vacancies = getCheckedValues('vacancy');
-      var deedOnly = document.getElementById('filter-deed-only').checked;
-      var titleAvail = document.getElementById('filter-title-avail').checked;
-      var lotMin = numVal('lot-min');
-      var lotMax = numVal('lot-max');
+      var search   = document.getElementById('ps-search-input').value.toLowerCase().trim();
+      var ltypes   = getCheckedValues('ltype');
+      var ptypes   = getCheckedValues('ptype');
       var priceMin = numVal('price-min');
       var priceMax = numVal('price-max');
-      var bldgMin = numVal('bldg-min');
-      var bldgMax = numVal('bldg-max');
+      var bldgMin  = numVal('bldg-min');
+      var bldgMax  = numVal('bldg-max');
 
       STATE.filteredProperties = PROPERTIES.filter(function(p) {
         /* Text search */
         if (search) {
-          var hay = (p.address + ' ' + p.city + ' ' + p.county + ' ' + p.zip + ' ' + p.description + ' ' + p.currentUse + ' ' + p.zoningLabel + ' ' + p.propertyType).toLowerCase();
+          var hay = (p.name + ' ' + p.streetAddress + ' ' + p.city + ' ' +
+                     p.propertyTypes.join(' ') + ' ' + p.broker + ' ' + p.comments).toLowerCase();
           if (hay.indexOf(search) === -1) return false;
         }
-        /* Checkbox filters */
-        if (ptypes.length && ptypes.indexOf(p.propertyType) === -1) return false;
-        if (zonings.length && zonings.indexOf(p.zoning) === -1) return false;
-        if (epas.length && epas.indexOf(p.epaStatus) === -1) return false;
-        if (gfs.length && gfs.indexOf(getGfFilterCategory(p)) === -1) return false;
-        if (counties.length && counties.indexOf(p.county) === -1) return false;
-        if (vacancies.length) {
-          var vac = p.isVacant ? 'vacant' : 'occupied';
-          if (vacancies.indexOf(vac) === -1) return false;
+        /* Listing type */
+        if (ltypes.length && ltypes.indexOf(p.listingType) === -1) return false;
+        /* Property type — match if any of the property's types are in the checked list */
+        if (ptypes.length) {
+          var match = p.propertyTypes.some(function(t) { return ptypes.indexOf(t) !== -1; });
+          if (!match) return false;
         }
-        /* Special flags */
-        if (deedOnly && p.titleFlags.length === 0 && p.deedRestrictions.length === 0) return false;
-        if (titleAvail && !p.hasTitleData) return false;
-        /* Ranges */
-        if (lotMin !== null && p.lotSqFt < lotMin) return false;
-        if (lotMax !== null && p.lotSqFt > lotMax) return false;
-        if (priceMin !== null && p.price < priceMin) return false;
-        if (priceMax !== null && p.price > priceMax) return false;
-        if (bldgMin !== null && p.bldgSqFt < bldgMin) return false;
-        if (bldgMax !== null && p.bldgSqFt > bldgMax) return false;
+        /* Price range (sale only — lease pricing is not always numeric) */
+        if (priceMin !== null && p.listingType === 'sale' && (p.price === null || p.price < priceMin)) return false;
+        if (priceMax !== null && p.listingType === 'sale' && (p.price === null || p.price > priceMax)) return false;
+        /* Building / space SF */
+        if (bldgMin !== null && (p.buildingSF === null || p.buildingSF < bldgMin)) return false;
+        if (bldgMax !== null && (p.buildingSF === null || p.buildingSF > bldgMax)) return false;
         return true;
       });
 
       /* Sort */
       var sort = document.getElementById('ps-sort').value;
       STATE.filteredProperties.sort(function(a, b) {
-        if (sort === 'price-asc') return a.price - b.price;
-        if (sort === 'price-desc') return b.price - a.price;
-        if (sort === 'lot-desc') return b.lotSqFt - a.lotSqFt;
-        if (sort === 'risk-desc') {
-          var riskOrder = { critical:4, high:3, moderate:2, low:1, none:0 };
-          return (riskOrder[getGrandfatherRisk(b)] || 0) - (riskOrder[getGrandfatherRisk(a)] || 0);
-        }
+        if (sort === 'price-asc')  return (a.price || 0) - (b.price || 0);
+        if (sort === 'price-desc') return (b.price || 0) - (a.price || 0);
+        if (sort === 'sf-desc')    return (b.buildingSF || 0) - (a.buildingSF || 0);
+        if (sort === 'id-desc')    return (b.listingId  || 0) - (a.listingId  || 0);
         return 0;
       });
 
@@ -1296,24 +1218,17 @@
     }
 
     function updateFilterCount() {
-      var total = PROPERTIES.length;
-      var filtered = STATE.filteredProperties.length;
+      var diff  = PROPERTIES.length - STATE.filteredProperties.length;
       var badge = document.getElementById('ps-filter-count');
-      var diff = total - filtered;
-      if (diff > 0) {
-        badge.textContent = diff;
-        badge.style.display = 'inline';
-      } else {
-        badge.style.display = 'none';
-      }
+      if (diff > 0) { badge.textContent = diff; badge.style.display = 'inline'; }
+      else           { badge.style.display = 'none'; }
     }
 
     function resetFilters() {
       document.querySelectorAll('.ps-filter-panel input[type="checkbox"]').forEach(function(cb) {
-        if (cb.name) cb.checked = true;
-        else cb.checked = false;
+        cb.checked = true;
       });
-      ['lot-min','lot-max','price-min','price-max','bldg-min','bldg-max'].forEach(function(id) {
+      ['price-min','price-max','bldg-min','bldg-max'].forEach(function(id) {
         document.getElementById(id).value = '';
       });
       document.getElementById('ps-search-input').value = '';
@@ -1361,58 +1276,35 @@
        Template-based system works immediately with no API key.
        If Anthropic API key + proxy are configured, uses Claude API instead. */
     function generateSummary(p, epaFacilities) {
-      /* Template-based summary (always available) */
       var lines = [];
-      var acres = acresFromSqFt(p.lotSqFt);
-      var pricePerSf = (p.price / p.lotSqFt).toFixed(2);
+      var typeStr = p.propertyTypes.join('/') || 'commercial';
 
-      /* Opening */
-      lines.push('This ' + acres + '-acre parcel at ' + p.address + ' in ' + p.city + '\'s ' + p.zoning + ' (' + p.zoningLabel + ') zone is listed at ' + formatPrice(p.price) + ' ($' + pricePerSf + '/sf lot).');
-
-      /* EPA */
-      if (p.epaStatus === 'clean') {
-        lines.push('No contamination findings on record for this parcel. Environmental survey databases return no Phase I or Phase II ESA flags for this address, and no UST removal orders or soil remediation records were identified.');
-        if (epaFacilities && epaFacilities.length > 0) {
-          lines.push(epaFacilities.length + ' EPA-tracked site' + (epaFacilities.length === 1 ? ' exists' : 's exist') + ' within ' + CONFIG.epaRadiusMiles + ' miles, but none indicate direct contamination risk to this parcel.');
-        }
-      } else if (p.epaStatus === 'flagged') {
-        lines.push('Environmental survey records flag concerns for this parcel — potential contamination risk from prior industrial use, underground storage tanks, or hydraulic fluid leaching. A Phase I ESA is required before acquisition.');
-        if (epaFacilities && epaFacilities.length > 0) {
-          lines.push(epaFacilities.length + ' EPA-tracked site' + (epaFacilities.length === 1 ? ' was' : 's were') + ' found within ' + CONFIG.epaRadiusMiles + ' miles.');
+      if (p.listingType === 'sale') {
+        var priceStr = p.price ? ('$' + p.price.toLocaleString()) : 'an undisclosed price';
+        lines.push('This ' + typeStr.toLowerCase() + ' property — ' + p.name + ' at ' + p.streetAddress + ' — is listed for sale at ' + priceStr + '.');
+        if (p.buildingSF) {
+          var sfStr = p.buildingSF.toLocaleString() + ' sq ft of building';
+          if (p.landSF) sfStr += ' on a ' + p.landSF.toLocaleString() + ' sq ft lot';
+          lines.push('The property includes ' + sfStr + '.');
         }
       } else {
-        lines.push('This is a designated brownfield with confirmed contamination identified through prior environmental survey. Remediation is required. Phase II ESA data and any VCP records should be reviewed carefully before proceeding.');
+        var leaseStr = (p.priceRaw && p.priceRaw !== 'None') ? p.priceRaw + '/SF/yr' : 'a rate available upon request';
+        lines.push('This ' + typeStr.toLowerCase() + ' space — ' + p.name + ' at ' + p.streetAddress + ' — is available for lease at ' + leaseStr + '.');
+        if (p.buildingSF) lines.push(p.buildingSF.toLocaleString() + ' sq ft of leasable space is available.');
       }
 
-      /* Grandfathered */
-      if (p.isGrandfathered) {
-        var risk = getGrandfatherRisk(p);
-        var vm = monthsSince(p.vacantSince);
-        lines.push('The property has documented ' + (p.currentUse || 'automotive') + ' use and holds grandfathered nonconforming status.');
-        if (p.isVacant && vm !== null) {
-          lines.push('It has been vacant for approximately ' + vm + ' months.');
-          if (risk === 'moderate') lines.push('This is approaching the review threshold — monitor closely.');
-          if (risk === 'high') lines.push('Risk is HIGH — vacancy duration is nearing the jurisdiction\'s limit for maintaining nonconforming use protections.');
-          if (risk === 'critical') lines.push('CRITICAL: vacancy exceeds typical nonconforming use windows. Grandfathered status may already be at risk of revocation.');
-        } else if (!p.isVacant) {
-          lines.push('The property is currently occupied with active automotive use — grandfathered status appears secure.');
-        }
+      if (p.bldgInfo) {
+        var firstLine = p.bldgInfo.split('\n')[0].trim();
+        if (firstLine) lines.push(firstLine);
       }
 
-      /* Title / Deed */
-      if (p.titleFlags.length > 0 || p.deedRestrictions.length > 0) {
-        var flags = p.titleFlags.concat(p.deedRestrictions);
-        lines.push('Title review reveals ' + flags.length + ' flag' + (flags.length === 1 ? '' : 's') + ': ' + flags.join('; ') + '. Recommend title company review before closing.');
-      } else if (p.hasTitleData) {
-        lines.push('No deed restrictions or title flags found in available public records.');
-      } else {
-        lines.push('Title data is not publicly available for this parcel — a formal title search is recommended.');
+      if (epaFacilities && epaFacilities.length > 0) {
+        lines.push(epaFacilities.length + ' EPA-tracked site' + (epaFacilities.length === 1 ? ' was' : 's were') + ' found within ' + CONFIG.epaRadiusMiles + ' miles of this property. A Phase I Environmental Site Assessment is recommended before acquisition or lease execution.');
+      } else if (epaFacilities) {
+        lines.push('No EPA-tracked facilities were found within ' + CONFIG.epaRadiusMiles + ' miles — a positive indicator from an environmental risk standpoint.');
       }
 
-      /* Fleet */
-      if (p.fleetSuitable) {
-        lines.push('This property is classified as fleet-suitable for state or federal vehicle operations, with features including: ' + p.fleetFeatures.join(', ') + '.');
-      }
+      if (p.broker) lines.push('Listing is represented by ' + p.broker + '. Full details available on CommercialMLS (listing #' + p.listingId + ').');
 
       return lines.join(' ');
     }
@@ -1457,135 +1349,103 @@
       if (!p) return;
       STATE.selectedProperty = p;
       var body = document.getElementById('ps-detail-body');
-      var risk = getGrandfatherRisk(p);
-      var vm = monthsSince(p.vacantSince);
-      var portalUrl = getPortalUrl(p);
-
-      /* Build HTML */
       var html = '';
-      html += '<h2>' + p.address + '</h2>';
-      html += '<div class="ps-detail-addr">' + p.city + ', ' + p.county + ' County, WA ' + p.zip + '</div>';
-      html += '<div class="ps-detail-price">$' + p.price.toLocaleString() + '</div>';
+
+      /* Header */
+      html += '<h2>' + p.name + '</h2>';
+      html += '<div class="ps-detail-addr">' + p.streetAddress + '</div>';
+      html += '<div style="margin: 10px 0 18px;">' + listingTypeBadge(p) + typeBadges(p) + epaBadge(p.epaStatus) + '</div>';
+
+      /* Price */
+      if (p.listingType === 'sale' && p.price) {
+        html += '<div class="ps-detail-price">$' + p.price.toLocaleString() + '</div>';
+      } else if (p.listingType === 'lease' && p.priceRaw && p.priceRaw !== 'None') {
+        html += '<div class="ps-detail-price">' + p.priceRaw + '<span style="font-size:0.9rem; font-weight:400; color:var(--steel);"> / SF / yr</span></div>';
+      } else {
+        html += '<div class="ps-detail-price" style="font-size:1.4rem; color:var(--steel);">Call for Rate</div>';
+      }
 
       /* Stats row */
       html += '<div class="ps-detail-stats">';
-      html += '<div class="ps-detail-stat"><div class="ps-detail-stat-val">' + acresFromSqFt(p.lotSqFt) + '</div><div class="ps-detail-stat-label">Acres</div></div>';
-      html += '<div class="ps-detail-stat"><div class="ps-detail-stat-val">' + formatSqFt(p.bldgSqFt) + '</div><div class="ps-detail-stat-label">Building</div></div>';
-      html += '<div class="ps-detail-stat"><div class="ps-detail-stat-val">' + p.zoning + '</div><div class="ps-detail-stat-label">Zoning</div></div>';
+      if (p.buildingSF) html += '<div class="ps-detail-stat"><div class="ps-detail-stat-val">' + p.buildingSF.toLocaleString() + '</div><div class="ps-detail-stat-label">' + (p.listingType === 'lease' ? 'SF Available' : 'Building SF') + '</div></div>';
+      if (p.landSF)     html += '<div class="ps-detail-stat"><div class="ps-detail-stat-val">' + p.landSF.toLocaleString() + '</div><div class="ps-detail-stat-label">Land SF</div></div>';
+      html += '<div class="ps-detail-stat"><div class="ps-detail-stat-val" style="font-size:0.9rem;">' + p.status + '</div><div class="ps-detail-stat-label">Status</div></div>';
       html += '</div>';
 
-      /* Badges */
-      html += '<div style="margin-bottom:24px;">' + allBadges(p) + '</div>';
-
-      /* AI Summary section */
+      /* Intelligence Summary */
       html += '<div class="ps-section" id="ps-summary-section">';
       html += '<div class="ps-section-title">Property Intelligence Summary</div>';
       html += '<div class="ps-summary-box" id="ps-summary-text"><em style="color:var(--dim);">Generating analysis...</em></div>';
       html += '</div>';
 
-      /* Property Details */
-      html += '<div class="ps-section">';
-      html += '<div class="ps-section-title">Property Details</div>';
-      html += '<div class="ps-info-row"><span class="ps-info-label">Property Type</span><span class="ps-info-value">' + p.propertyType.replace(/-/g,' ').replace(/\b\w/g, function(c){return c.toUpperCase();}) + '</span></div>';
-      html += '<div class="ps-info-row"><span class="ps-info-label">Zoning</span><span class="ps-info-value">' + p.zoning + ' — ' + p.zoningLabel + '</span></div>';
-      html += '<div class="ps-info-row"><span class="ps-info-label">Lot Size</span><span class="ps-info-value">' + p.lotSqFt.toLocaleString() + ' sf (' + acresFromSqFt(p.lotSqFt) + ' ac)</span></div>';
-      html += '<div class="ps-info-row"><span class="ps-info-label">Building</span><span class="ps-info-value">' + (p.bldgSqFt ? p.bldgSqFt.toLocaleString() + ' sf' : 'Vacant land') + '</span></div>';
-      if (p.yearBuilt) html += '<div class="ps-info-row"><span class="ps-info-label">Year Built</span><span class="ps-info-value">' + p.yearBuilt + '</span></div>';
-      html += '<div class="ps-info-row"><span class="ps-info-label">Current Use</span><span class="ps-info-value">' + p.currentUse + '</span></div>';
-      html += '<div class="ps-info-row"><span class="ps-info-label">Vacancy</span><span class="ps-info-value">' + (p.isVacant ? 'Vacant' + (vm !== null ? ' (' + vm + ' months)' : '') : 'Occupied / Active') + '</span></div>';
-      html += '<div class="ps-info-row"><span class="ps-info-label">Price / SF (Lot)</span><span class="ps-info-value">$' + (p.price / p.lotSqFt).toFixed(2) + '</span></div>';
-      html += '<div class="ps-info-row"><span class="ps-info-label">Source</span><span class="ps-info-value">' + p.listingSource + '</span></div>';
-      html += '<div class="ps-info-row"><span class="ps-info-label">County Portal</span><span class="ps-info-value"><a href="' + portalUrl + '" target="_blank" rel="noopener" style="color:var(--red);">View Records &#8599;</a></span></div>';
-      html += '<div style="margin-top:10px; font-size:0.82rem; color:var(--steel); line-height:1.6;">' + p.description + '</div>';
+      /* Building Info */
+      if (p.bldgInfo) {
+        html += '<div class="ps-section"><div class="ps-section-title">Building Info</div>';
+        html += '<div style="font-size:0.85rem; color:var(--steel); line-height:1.65;">' + p.bldgInfo.replace(/\n/g, '<br>') + '</div></div>';
+      }
+
+      /* Listing Description */
+      if (p.comments) {
+        html += '<div class="ps-section"><div class="ps-section-title">Listing Description</div>';
+        html += '<div style="font-size:0.85rem; color:var(--steel); line-height:1.65;">' + p.comments + '</div></div>';
+      }
+
+      /* Listing Details */
+      html += '<div class="ps-section"><div class="ps-section-title">Listing Details</div>';
+      html += '<div class="ps-info-row"><span class="ps-info-label">Listing Type</span><span class="ps-info-value">' + (p.listingType === 'sale' ? 'For Sale' : 'For Lease') + '</span></div>';
+      html += '<div class="ps-info-row"><span class="ps-info-label">Property Type</span><span class="ps-info-value">' + p.propertyTypes.join(', ') + '</span></div>';
+      if (p.leaseType) html += '<div class="ps-info-row"><span class="ps-info-label">Lease Type</span><span class="ps-info-value">' + p.leaseType + '</span></div>';
+      html += '<div class="ps-info-row"><span class="ps-info-label">Status</span><span class="ps-info-value">' + p.status + '</span></div>';
+      if (p.broker)    html += '<div class="ps-info-row"><span class="ps-info-label">Broker / Office</span><span class="ps-info-value">' + p.broker + '</span></div>';
+      if (p.listingId) html += '<div class="ps-info-row"><span class="ps-info-label">Listing ID</span><span class="ps-info-value">' + p.listingId + '</span></div>';
+      if (p.link)      html += '<div class="ps-info-row"><span class="ps-info-label">Full Listing</span><span class="ps-info-value"><a href="' + p.link + '" target="_blank" rel="noopener" style="color:var(--red);">View on CommercialMLS &#8599;</a></span></div>';
       html += '</div>';
 
       /* EPA & Environmental */
-      html += '<div class="ps-section">';
-      html += '<div class="ps-section-title">Environmental Survey History</div>';
+      html += '<div class="ps-section"><div class="ps-section-title">Environmental Survey History</div>';
       html += '<div style="margin-bottom:12px;">' + epaBadge(p.epaStatus) + '</div>';
       html += epaAssessmentHtml(p);
-      html += '<div style="margin-top:16px; padding-top:12px; border-top:1px solid var(--border);"><div style="font-size:0.75rem; text-transform:uppercase; letter-spacing:0.06em; color:var(--dim); margin-bottom:8px;">Nearby Environmental Records</div>';
-      html += '<div id="ps-epa-results"><div class="ps-epa-loading">&#8987; Querying EPA ECHO database&hellip;</div></div></div>';
-      html += '</div>';
-
-      /* Grandfathered Status */
-      if (p.isGrandfathered) {
-        html += '<div class="ps-section">';
-        html += '<div class="ps-section-title">Grandfathered Status</div>';
-        html += '<div class="ps-info-row"><span class="ps-info-label">Status</span><span class="ps-info-value">' + (risk === 'low' ? '&#9989; Protected' : risk === 'moderate' ? '&#9888; At Risk' : risk === 'high' ? '&#128308; High Risk' : '&#128680; Critical') + '</span></div>';
-        html += '<div class="ps-info-row"><span class="ps-info-label">Risk Level</span><span class="ps-info-value" style="text-transform:uppercase;">' + risk + '</span></div>';
-        html += '<div class="ps-risk-meter ps-risk-' + risk + '"><div class="ps-risk-fill"></div></div>';
-        if (p.grandfatherRiskFactors.length > 0) {
-          html += '<ul class="ps-risk-factors">';
-          p.grandfatherRiskFactors.forEach(function(f) { html += '<li>' + f + '</li>'; });
-          html += '</ul>';
-        }
-        html += '</div>';
-      }
-
-      /* Title & Deed */
-      html += '<div class="ps-section">';
-      html += '<div class="ps-section-title">Title &amp; Deed Restrictions</div>';
-      if (!p.hasTitleData) {
-        html += '<p style="font-size:0.84rem; color:var(--dim);">Title data is not publicly available for this parcel. A formal title search through a title company is recommended.</p>';
-      } else if (p.titleFlags.length === 0 && p.deedRestrictions.length === 0) {
-        html += '<p style="font-size:0.84rem; color:var(--steel);">&#9989; No deed restrictions or title flags found in public records.</p>';
+      if (p.lat) {
+        html += '<div style="margin-top:16px; padding-top:12px; border-top:1px solid var(--border);">';
+        html += '<div style="font-size:0.75rem; text-transform:uppercase; letter-spacing:0.06em; color:var(--dim); margin-bottom:8px;">Nearby EPA Records (within ' + CONFIG.epaRadiusMiles + ' mi)</div>';
+        html += '<div id="ps-epa-results"><div class="ps-epa-loading">&#8987; Querying EPA ECHO database&hellip;</div></div></div>';
       } else {
-        if (p.titleFlags.length > 0) {
-          html += '<h4 style="font-family:\'Barlow Condensed\',sans-serif; font-size:0.7rem; letter-spacing:0.12em; text-transform:uppercase; color:var(--steel); margin:0 0 8px;">Title Flags</h4>';
-          p.titleFlags.forEach(function(f) { html += '<div class="ps-epa-item"><div class="ps-epa-item-name">&#128203; ' + f + '</div></div>'; });
-        }
-        if (p.deedRestrictions.length > 0) {
-          html += '<h4 style="font-family:\'Barlow Condensed\',sans-serif; font-size:0.7rem; letter-spacing:0.12em; text-transform:uppercase; color:var(--steel); margin:12px 0 8px;">Deed Restrictions</h4>';
-          p.deedRestrictions.forEach(function(r) { html += '<div class="ps-epa-item"><div class="ps-epa-item-name">&#128274; ' + r + '</div></div>'; });
-        }
+        html += '<p style="font-size:0.82rem; color:var(--dim); margin-top:10px;">Map coordinates pending — EPA proximity lookup will be available once geocoding completes.</p>';
       }
       html += '</div>';
-
-      /* Fleet Suitability */
-      if (p.fleetSuitable) {
-        html += '<div class="ps-section">';
-        html += '<div class="ps-section-title">Fleet &amp; Government Suitability</div>';
-        html += '<p style="font-size:0.84rem; color:var(--steel); margin-bottom:10px;">This property is classified as suitable for state or federal fleet vehicle operations.</p>';
-        html += '<div style="display:flex; flex-wrap:wrap; gap:6px;">';
-        p.fleetFeatures.forEach(function(f) { html += '<span class="ps-badge ps-badge-fleet">' + f + '</span>'; });
-        html += '</div></div>';
-      }
 
       body.innerHTML = html;
       document.getElementById('ps-detail').classList.add('open');
 
-      /* Fly map to property */
-      STATE.map.flyTo([p.lat, p.lng], 14, { duration: 0.8 });
-      if (STATE.markers[p.id]) STATE.markers[p.id].openPopup();
+      /* Fly map if we have coords */
+      if (p.lat && p.lng) {
+        STATE.map.flyTo([p.lat, p.lng], 14, { duration: 0.8 });
+        if (STATE.markers[p.id]) STATE.markers[p.id].openPopup();
 
-      /* Fetch real EPA data */
-      fetchEpaData(p.lat, p.lng, function(err, facilities) {
-        var el = document.getElementById('ps-epa-results');
-        if (!el) return;
-        if (err) {
-          el.innerHTML = '<p style="font-size:0.82rem; color:var(--dim);">Could not reach EPA ECHO database. Check connection and try again.</p>';
-        } else if (facilities.length === 0) {
-          el.innerHTML = '<p style="font-size:0.82rem; color:var(--steel);">No EPA-tracked facilities found within ' + CONFIG.epaRadiusMiles + ' miles radius.</p>';
-        } else {
-          var h = '<p style="font-size:0.82rem; color:var(--steel); margin-bottom:10px;"><strong>' + facilities.length + '</strong> EPA-tracked site' + (facilities.length === 1 ? '' : 's') + ' within ' + CONFIG.epaRadiusMiles + ' miles — these are nearby facilities with EPA compliance records, not assessments of this specific parcel:</p>';
-          facilities.slice(0, 10).forEach(function(f) {
-            h += '<div class="ps-epa-item">';
-            h += '<div class="ps-epa-item-name">' + f.name + '</div>';
-            h += '<div class="ps-epa-item-detail">' + f.address + '</div>';
-            h += '<div class="ps-epa-item-detail">CWA: ' + f.cwaStatus + ' | RCRA: ' + f.rcraStatus + ' | CAA: ' + f.caaStatus + '</div>';
-            h += '</div>';
+        fetchEpaData(p.lat, p.lng, function(err, facilities) {
+          var el = document.getElementById('ps-epa-results');
+          if (!el) return;
+          if (err || !facilities || facilities.length === 0) {
+            el.innerHTML = '<p style="font-size:0.82rem; color:var(--steel);">No EPA-tracked facilities found within ' + CONFIG.epaRadiusMiles + ' miles radius.</p>';
+          } else {
+            var h = '<p style="font-size:0.82rem; color:var(--steel); margin-bottom:10px;"><strong>' + facilities.length + '</strong> EPA-tracked site' + (facilities.length === 1 ? '' : 's') + ' within ' + CONFIG.epaRadiusMiles + ' miles — nearby facilities with EPA compliance records:</p>';
+            facilities.slice(0, 10).forEach(function(f) {
+              h += '<div class="ps-epa-item"><div class="ps-epa-item-name">' + f.name + '</div><div class="ps-epa-item-detail">' + f.address + '</div><div class="ps-epa-item-detail">CWA: ' + f.cwaStatus + ' | RCRA: ' + f.rcraStatus + ' | CAA: ' + f.caaStatus + '</div></div>';
+            });
+            if (facilities.length > 10) h += '<p style="font-size:0.75rem; color:var(--dim); margin-top:8px;">+ ' + (facilities.length - 10) + ' more. Visit EPA ECHO for full list.</p>';
+            el.innerHTML = h;
+          }
+          generateAiSummary(p, facilities, function(text) {
+            var sEl = document.getElementById('ps-summary-text');
+            if (sEl) sEl.innerHTML = text;
           });
-          if (facilities.length > 10) h += '<p style="font-size:0.75rem; color:var(--dim); margin-top:8px;">+ ' + (facilities.length - 10) + ' more records. Visit EPA ECHO for the full list.</p>';
-          el.innerHTML = h;
-        }
-
-        /* Generate summary after EPA data loads */
-        generateAiSummary(p, facilities, function(text) {
+        });
+      } else {
+        generateAiSummary(p, [], function(text) {
           var sEl = document.getElementById('ps-summary-text');
           if (sEl) sEl.innerHTML = text;
         });
-      });
+      }
     }
 
     function closeDetail() {
@@ -1602,8 +1462,8 @@
       var jsPDF = window.jspdf.jsPDF;
       var doc = new jsPDF({ unit: 'mm', format: 'a4' });
       var y = 20;
-      var lm = 20; /* left margin */
-      var pw = 170; /* page width usable */
+      var lm = 20;
+      var pw = 170;
 
       /* Header */
       doc.setFillColor(10, 15, 30);
@@ -1617,23 +1477,24 @@
       doc.text('Automotive Real Estate Solutions — Property Intelligence Report', lm, 26);
       doc.setTextColor(107, 114, 128);
       doc.setFontSize(7);
-      doc.text('Generated: ' + new Date().toLocaleDateString() + ' | ID: ' + p.id, lm, 34);
+      doc.text('Generated: ' + new Date().toLocaleDateString() + ' | Listing #' + (p.listingId || p.id), lm, 34);
 
       y = 50;
       doc.setTextColor(30, 30, 30);
 
       /* Property heading */
-      doc.setFontSize(16);
+      doc.setFontSize(15);
       doc.setFont('helvetica', 'bold');
-      doc.text(p.address, lm, y); y += 7;
-      doc.setFontSize(10);
+      var nameLines = doc.splitTextToSize(p.name, pw);
+      doc.text(nameLines, lm, y); y += nameLines.length * 7;
+      doc.setFontSize(9);
       doc.setFont('helvetica', 'normal');
-      doc.text(p.city + ', ' + p.county + ' County, WA ' + p.zip, lm, y); y += 10;
+      doc.text(p.streetAddress, lm, y); y += 10;
 
-      doc.setFontSize(14);
+      doc.setFontSize(13);
       doc.setTextColor(200, 16, 46);
       doc.setFont('helvetica', 'bold');
-      doc.text('$' + p.price.toLocaleString(), lm, y); y += 12;
+      doc.text(displayPrice(p), lm, y); y += 12;
 
       /* Details table */
       doc.setTextColor(30, 30, 30);
@@ -1641,92 +1502,67 @@
       doc.setFont('helvetica', 'bold');
       doc.text('PROPERTY DETAILS', lm, y); y += 6;
       doc.setFont('helvetica', 'normal');
+
       var details = [
-        ['Lot Size', p.lotSqFt.toLocaleString() + ' sf (' + acresFromSqFt(p.lotSqFt) + ' acres)'],
-        ['Building', p.bldgSqFt ? p.bldgSqFt.toLocaleString() + ' sf' : 'Vacant land'],
-        ['Zoning', p.zoning + ' — ' + p.zoningLabel],
-        ['Property Type', p.propertyType.replace(/-/g, ' ')],
-        ['Current Use', p.currentUse],
-        ['Year Built', p.yearBuilt ? String(p.yearBuilt) : 'N/A'],
-        ['Vacancy', p.isVacant ? 'Vacant' + (monthsSince(p.vacantSince) !== null ? ' (' + monthsSince(p.vacantSince) + ' months)' : '') : 'Occupied'],
-        ['Price/SF', '$' + (p.price / p.lotSqFt).toFixed(2)]
+        ['Listing Type',   p.listingType === 'sale' ? 'For Sale' : 'For Lease'],
+        ['Property Type',  p.propertyTypes.join(', ')],
+        ['Status',         p.status]
       ];
+      if (p.buildingSF) details.push([p.listingType === 'lease' ? 'SF Available' : 'Building SF', p.buildingSF.toLocaleString() + ' sf']);
+      if (p.landSF)     details.push(['Land SF', p.landSF.toLocaleString() + ' sf']);
+      if (p.leaseType)  details.push(['Lease Type', p.leaseType]);
+      if (p.broker)     details.push(['Broker / Office', p.broker]);
+      if (p.listingId)  details.push(['Listing ID', String(p.listingId)]);
+      if (p.link)       details.push(['CommercialMLS', p.link]);
+
       doc.setFontSize(8);
       details.forEach(function(row) {
         doc.setFont('helvetica', 'bold');
         doc.text(row[0] + ':', lm, y);
         doc.setFont('helvetica', 'normal');
-        doc.text(row[1], lm + 40, y);
-        y += 5;
+        var valLines = doc.splitTextToSize(row[1], pw - 45);
+        doc.text(valLines, lm + 42, y);
+        y += Math.max(valLines.length * 4, 5);
       });
       y += 6;
 
-      /* EPA */
-      doc.setFontSize(9);
-      doc.setFont('helvetica', 'bold');
-      doc.text('EPA & ENVIRONMENTAL', lm, y); y += 6;
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(8);
-      doc.text('Status: ' + p.epaStatus.toUpperCase(), lm, y); y += 8;
-
-      /* Grandfathered */
-      if (p.isGrandfathered) {
+      /* Description */
+      if (p.comments) {
         doc.setFontSize(9);
         doc.setFont('helvetica', 'bold');
-        doc.text('GRANDFATHERED STATUS', lm, y); y += 6;
+        doc.text('LISTING DESCRIPTION', lm, y); y += 6;
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(8);
-        doc.text('Risk Level: ' + getGrandfatherRisk(p).toUpperCase(), lm, y); y += 5;
-        p.grandfatherRiskFactors.forEach(function(f) {
-          var lines = doc.splitTextToSize('- ' + f, pw);
-          doc.text(lines, lm, y);
-          y += lines.length * 4;
-        });
-        y += 4;
+        var descLines = doc.splitTextToSize(p.comments, pw);
+        if (y + descLines.length * 4 > 270) { doc.addPage(); y = 20; }
+        doc.text(descLines, lm, y);
+        y += descLines.length * 4 + 6;
       }
 
-      /* Title */
-      doc.setFontSize(9);
-      doc.setFont('helvetica', 'bold');
-      doc.text('TITLE & DEED RESTRICTIONS', lm, y); y += 6;
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(8);
-      if (p.titleFlags.length === 0 && p.deedRestrictions.length === 0) {
-        doc.text('No title flags or deed restrictions found.', lm, y); y += 5;
-      } else {
-        p.titleFlags.concat(p.deedRestrictions).forEach(function(f) {
-          var lines = doc.splitTextToSize('- ' + f, pw);
-          doc.text(lines, lm, y);
-          y += lines.length * 4;
-        });
-      }
-      y += 6;
-
-      /* Summary */
+      /* Intelligence Summary */
       var summaryEl = document.getElementById('ps-summary-text');
-      if (summaryEl && summaryEl.textContent) {
+      if (summaryEl && summaryEl.textContent && summaryEl.textContent.trim() !== 'Generating analysis...') {
         doc.setFontSize(9);
         doc.setFont('helvetica', 'bold');
+        if (y > 250) { doc.addPage(); y = 20; }
         doc.text('INTELLIGENCE SUMMARY', lm, y); y += 6;
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(8);
         var sLines = doc.splitTextToSize(summaryEl.textContent, pw);
-        /* Check if we need a new page */
-        if (y + (sLines.length * 4) > 280) { doc.addPage(); y = 20; }
+        if (y + sLines.length * 4 > 270) { doc.addPage(); y = 20; }
         doc.text(sLines, lm, y);
         y += sLines.length * 4;
       }
 
       /* Footer */
-      y = 282;
       doc.setDrawColor(200, 16, 46);
-      doc.line(lm, y, lm + pw, y);
+      doc.line(lm, 282, lm + pw, 282);
       doc.setFontSize(7);
       doc.setTextColor(150, 150, 150);
-      doc.text('ARES — Automotive Real Estate Solutions | South Sound, Washington State | rjspiel.github.io', lm, y + 5);
-      doc.text('This report is for informational purposes only. Verify all data independently before making acquisition decisions.', lm, y + 9);
+      doc.text('ARES — Automotive Real Estate Solutions | South Sound, Washington State | rjspiel.github.io', lm, 287);
+      doc.text('This report is for informational purposes only. Verify all data independently before making acquisition decisions.', lm, 291);
 
-      doc.save('ARES_Property_' + p.id + '.pdf');
+      doc.save('ARES_Property_' + (p.listingId || p.id) + '.pdf');
     }
 
     /* ── EVENT HANDLERS ── */
@@ -1809,6 +1645,12 @@
         PROPERTIES = properties;
         STATE.filteredProperties = [...PROPERTIES];
         applyFilters();
+
+        /* Geocode addresses in background so map markers appear progressively.
+           Nominatim is free and requires no API key — rate limited to 1 req/sec. */
+        geocodeAll(PROPERTIES, function() {
+          renderMarkers();
+        });
       });
     }
 
@@ -1824,3 +1666,4 @@
 
 </body>
 </html>
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     
