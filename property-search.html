@@ -1409,50 +1409,39 @@
       html += '</div>';
 
       /* EPA & Environmental */
-      html += '<div class="ps-section"><div class="ps-section-title">Environmental Survey History</div>';
-      html += '<div style="margin-bottom:12px;">' + epaBadge(p.epaStatus) + '</div>';
-      html += epaAssessmentHtml(p);
-      if (p.lat) {
-        html += '<div style="margin-top:16px; padding-top:12px; border-top:1px solid var(--border);">';
-        html += '<div style="font-size:0.75rem; text-transform:uppercase; letter-spacing:0.06em; color:var(--dim); margin-bottom:8px;">Nearby EPA Records (within ' + CONFIG.epaRadiusMiles + ' mi)</div>';
-        html += '<div id="ps-epa-results"><div class="ps-epa-loading">&#8987; Querying EPA ECHO database&hellip;</div></div></div>';
-      } else {
-        html += '<p style="font-size:0.82rem; color:var(--dim); margin-top:10px;">Map coordinates pending — EPA proximity lookup will be available once geocoding completes.</p>';
-      }
+      html += '<div class="ps-section"><div class="ps-section-title">Nearby Environmental Records</div>';
+      html += '<p style="font-size:0.82rem; color:var(--steel); line-height:1.6; margin-bottom:12px;">Live query of the EPA ECHO database for regulated facilities within ' + CONFIG.epaRadiusMiles + ' miles. These are nearby sites with federal environmental compliance records — not an assessment of this specific parcel.</p>';
+      html += '<div id="ps-epa-results"><div class="ps-epa-loading">&#8987; Querying EPA ECHO database&hellip;</div></div>';
       html += '</div>';
 
       body.innerHTML = html;
       document.getElementById('ps-detail').classList.add('open');
 
-      /* Fly map if we have coords */
+      /* Fly map to property */
       if (p.lat && p.lng) {
         STATE.map.flyTo([p.lat, p.lng], 14, { duration: 0.8 });
         if (STATE.markers[p.id]) STATE.markers[p.id].openPopup();
+      }
 
-        fetchEpaData(p.lat, p.lng, function(err, facilities) {
-          var el = document.getElementById('ps-epa-results');
-          if (!el) return;
-          if (err || !facilities || facilities.length === 0) {
-            el.innerHTML = '<p style="font-size:0.82rem; color:var(--steel);">No EPA-tracked facilities found within ' + CONFIG.epaRadiusMiles + ' miles radius.</p>';
-          } else {
-            var h = '<p style="font-size:0.82rem; color:var(--steel); margin-bottom:10px;"><strong>' + facilities.length + '</strong> EPA-tracked site' + (facilities.length === 1 ? '' : 's') + ' within ' + CONFIG.epaRadiusMiles + ' miles — nearby facilities with EPA compliance records:</p>';
-            facilities.slice(0, 10).forEach(function(f) {
-              h += '<div class="ps-epa-item"><div class="ps-epa-item-name">' + f.name + '</div><div class="ps-epa-item-detail">' + f.address + '</div><div class="ps-epa-item-detail">CWA: ' + f.cwaStatus + ' | RCRA: ' + f.rcraStatus + ' | CAA: ' + f.caaStatus + '</div></div>';
-            });
-            if (facilities.length > 10) h += '<p style="font-size:0.75rem; color:var(--dim); margin-top:8px;">+ ' + (facilities.length - 10) + ' more. Visit EPA ECHO for full list.</p>';
-            el.innerHTML = h;
-          }
-          generateAiSummary(p, facilities, function(text) {
-            var sEl = document.getElementById('ps-summary-text');
-            if (sEl) sEl.innerHTML = text;
+      /* EPA ECHO live lookup */
+      fetchEpaData(p.lat, p.lng, function(err, facilities) {
+        var el = document.getElementById('ps-epa-results');
+        if (!el) return;
+        if (err || !facilities || facilities.length === 0) {
+          el.innerHTML = '<p style="font-size:0.82rem; color:var(--steel);">No EPA-tracked facilities found within ' + CONFIG.epaRadiusMiles + ' miles of this property.</p>';
+        } else {
+          var h = '<p style="font-size:0.82rem; color:var(--steel); margin-bottom:10px;"><strong>' + facilities.length + '</strong> regulated site' + (facilities.length === 1 ? '' : 's') + ' found within ' + CONFIG.epaRadiusMiles + ' miles:</p>';
+          facilities.slice(0, 10).forEach(function(f) {
+            h += '<div class="ps-epa-item"><div class="ps-epa-item-name">' + f.name + '</div><div class="ps-epa-item-detail">' + f.address + '</div><div class="ps-epa-item-detail">CWA: ' + f.cwaStatus + ' | RCRA: ' + f.rcraStatus + ' | CAA: ' + f.caaStatus + '</div></div>';
           });
-        });
-      } else {
-        generateAiSummary(p, [], function(text) {
+          if (facilities.length > 10) h += '<p style="font-size:0.75rem; color:var(--dim); margin-top:8px;">+ ' + (facilities.length - 10) + ' more — visit EPA ECHO for full list.</p>';
+          el.innerHTML = h;
+        }
+        generateAiSummary(p, facilities, function(text) {
           var sEl = document.getElementById('ps-summary-text');
           if (sEl) sEl.innerHTML = text;
         });
-      }
+      });
     }
 
     function closeDetail() {
@@ -1652,12 +1641,7 @@
         PROPERTIES = properties;
         STATE.filteredProperties = [...PROPERTIES];
         applyFilters();
-
-        /* Geocode addresses in background so map markers appear progressively.
-           Nominatim is free and requires no API key — rate limited to 1 req/sec. */
-        geocodeAll(PROPERTIES, function() {
-          renderMarkers();
-        });
+        renderMarkers();
       });
     }
 
