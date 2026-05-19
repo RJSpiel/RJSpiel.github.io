@@ -1195,7 +1195,7 @@
         '<div class="ps-card-city">' + p.streetAddress + '</div>'+
         (sfLine ? '<div class="ps-card-stats">' + sfLine + '</div>' : '') +
         '<div class="ps-card-badges">' + listingTypeBadge(p) + typeBadges(p) + epaBadge(p.epaStatus) + '</div>'+
-        (p.broker ? '<div style="font-size:0.72rem; color:var(--dim); margin-top:6px; padding-top:4px; border-top:1px solid var(--border);">' + p.broker + '</div>' : '')+
+        (p.broker ? '<div style="font-size:0.72rem; color:var(--dim); margin-top:6px; padding-top:4px; border-top:1px solid var(--border);">Courtesy of ' + p.broker + '</div>' : '')+
       '</div>';
     }
 
@@ -1480,9 +1480,14 @@
       html += '<div class="ps-info-row"><span class="ps-info-label">Property Type</span><span class="ps-info-value">' + p.propertyTypes.join(', ') + '</span></div>';
       if (p.leaseType) html += '<div class="ps-info-row"><span class="ps-info-label">Lease Type</span><span class="ps-info-value">' + p.leaseType + '</span></div>';
       html += '<div class="ps-info-row"><span class="ps-info-label">Status</span><span class="ps-info-value">' + p.status + '</span></div>';
-      if (p.broker)    html += '<div class="ps-info-row"><span class="ps-info-label">Broker / Office</span><span class="ps-info-value">' + p.broker + '</span></div>';
+      if (p.broker)    html += '<div class="ps-info-row"><span class="ps-info-label">Courtesy of</span><span class="ps-info-value">' + p.broker + '</span></div>';
       if (p.listingId) html += '<div class="ps-info-row"><span class="ps-info-label">Listing ID</span><span class="ps-info-value">' + p.listingId + '</span></div>';
       if (p.link)      html += '<div class="ps-info-row"><span class="ps-info-label">Full Listing</span><span class="ps-info-value"><a href="' + p.link + '" target="_blank" rel="noopener" style="color:var(--red);">View on CommercialMLS &#8599;</a></span></div>';
+      html += '</div>';
+
+      /* Contact */
+      html += '<div class="ps-section" style="border-top:1px solid var(--border); padding-top:16px;">';
+      html += '<p style="font-size:0.85rem; color:var(--steel); line-height:1.6;">For more information on this property, reach out to <strong style="color:var(--white);">Hugh Winskill</strong> at <a href="mailto:hugh@newnorthwestproperties.com" style="color:var(--red);">hugh@newnorthwestproperties.com</a>.</p>';
       html += '</div>';
 
       /* EPA & Environmental */
